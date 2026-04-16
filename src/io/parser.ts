@@ -1,5 +1,3 @@
-import * as fs from "fs";
-import * as readline from "readline";
 import { z } from "zod";
 import { Graph } from "../core/Graph";
 import type { UnweightedEdge, WeightedEdge } from "../core/types";
@@ -12,26 +10,16 @@ const EdgeSchema = z.object({
 });
 
 /**
- * Parses a graph text file asynchronously.
- * Line 1: Number of vertices (N).
- * Subsequent lines: [from] [to] OR [from] [to] [weight]
+ * Parses graph data line-by-line from any iterable source.
  */
-export async function readGraphFromFile(
-  filePath: string,
+export async function parseGraphFromLines(
+  lines: AsyncIterable<string> | Iterable<string>,
   isDirected: boolean = false
 ): Promise<Graph<number>> {
-  const fileStream = fs.createReadStream(filePath);
-
-  // readline is memory efficient, even for files with millions of lines
-  const rl = readline.createInterface({
-    input: fileStream,
-    crlfDelay: Infinity
-  });
-
   const graph = new Graph<number>(isDirected);
   let isFirstLine = true;
 
-  for await (const line of rl) {
+  for await (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue; // Skip empty lines
 
@@ -48,7 +36,6 @@ export async function readGraphFromFile(
       continue;
     }
 
-    // Parse edge definitions
     const parts = trimmed.split(/\s+/);
 
     // Map the raw string array to our pre-defined names
