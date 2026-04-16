@@ -64,6 +64,11 @@ export function* countConnectedComponentsGenerator<T>(
   let componentCount = 0;
 
   for (const startNode of graph.getNodes()) {
+    // Skip already visited nodes
+    if (visited.has(startNode)) {
+      continue;
+    }
+
     // YIELD the outer loop state
     yield {
       componentCount,

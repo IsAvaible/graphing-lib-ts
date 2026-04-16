@@ -4,6 +4,9 @@ import { Graph } from "../core/Graph";
 
 interface GraphCanvasProps {
   graph: Graph<number> | null;
+  visitedNodes?: Set<number>;
+  currentNode?: number | null;
+  queuedNodes?: Set<number>;
 }
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -15,9 +18,15 @@ interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   target: number | GraphNode;
 }
 
-export const GraphCanvas: React.FC<GraphCanvasProps> = ({ graph }) => {
+export const GraphCanvas: React.FC<GraphCanvasProps> = ({
+  graph,
+  visitedNodes = new Set(),
+  currentNode = null,
+  queuedNodes = new Set()
+}) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
+  // Handles Physics, Zoom, and initial DOM creation
   useEffect(() => {
     if (!graph || !svgRef.current) return;
 
@@ -52,16 +61,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({ graph }) => {
       .style("pointer-events", "all");
 
     // Create a master container for the graph elements
-    const container = svg.append("g");
+    const container = svg.append("g").attr("class", "graph-container");
 
     // Setup Zoom and Canvas Panning
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 4]) // Limit zoom scale (0.1x to 4x)
+      .scaleExtent([0.1, 4])
       .on("zoom", (event) => {
-        // Transform the graph elements
         container.attr("transform", event.transform);
-        // Transform the grid pattern to match the pan and zoom
         pattern.attr(
           "patternTransform",
           `translate(${event.transform.x}, ${event.transform.y}) scale(${event.transform.k})`
@@ -109,7 +116,6 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({ graph }) => {
         d.fy = null;
       });
 
-    // Append to the `container` instead of `svg` so they scale and pan
     const link = container
       .append("g")
       .selectAll("line")
@@ -121,11 +127,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({ graph }) => {
 
     const node = container
       .append("g")
+      .attr("class", "nodes-group")
       .selectAll<SVGCircleElement, unknown>("circle")
       .data(nodes)
       .join("circle")
       .attr("r", 12)
-      .attr("fill", "#4338ca")
+      .attr("fill", "#4338ca") // Default color
       .attr("stroke", "#ffffff")
       .attr("stroke-width", 2)
       .attr("cursor", "pointer")
@@ -158,6 +165,30 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({ graph }) => {
       simulation.stop();
     };
   }, [graph]);
+
+  // Handles only visual state updates (colors/sizes)
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    // Select the nodes we created in the main effect
+    const svg = d3.select(svgRef.current);
+    const nodes = svg
+      .select(".nodes-group")
+      .selectAll<SVGCircleElement, GraphNode>("circle");
+
+    // Animate color and size changes based on algorithm state
+    nodes
+      .transition()
+      .duration(300)
+      .attr("fill", (d) => {
+        if (d.id === currentNode) return "#ef4444"; // Red: Currently evaluating
+        if (visitedNodes.has(d.id)) return "#10b981"; // Green: Fully Visited
+        if (queuedNodes.has(d.id)) return "#3b82f6"; // Blue: In Queue
+        return "#4338ca"; // Indigo: Unvisited (Default)
+      })
+      .attr("r", (d) => (d.id === currentNode ? 16 : 12))
+      .attr("stroke", (d) => (d.id === currentNode ? "#000000" : "#ffffff"));
+  }, [visitedNodes, currentNode, queuedNodes]);
 
   return (
     <div className="grow bg-white overflow-hidden relative">
