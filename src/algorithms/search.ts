@@ -29,20 +29,24 @@ export interface ConnectedComponentsState<T> {
 export function* breadthFirstSearch<T>(
   graph: Graph<T>,
   startNode: T,
-  visited: Set<T> = new Set()
+  visited: Set<T> = new Set(),
+  recordState: boolean = true
 ): Generator<BFSState<T>, void, unknown> {
   const queue: T[] = [startNode];
+  let head = 0;
   visited.add(startNode);
 
-  while (queue.length > 0) {
-    const current = queue.shift()!;
+  while (head < queue.length) {
+    const current = queue[head++];
 
-    // YIELD the current state to external consumer.
-    yield {
-      currentNode: current,
-      visitedNodes: new Set(visited),
-      queue: [...queue]
-    };
+    if (recordState) {
+      // YIELD the current state to external consumer.
+      yield {
+        currentNode: current,
+        visitedNodes: new Set(visited),
+        queue: queue.slice(head)
+      };
+    }
 
     for (const edge of graph.getNeighbors(current)) {
       if (!visited.has(edge.to)) {
@@ -58,7 +62,8 @@ export function* breadthFirstSearch<T>(
  * including the nested BFS traversal steps.
  */
 export function* countConnectedComponentsGenerator<T>(
-  graph: Graph<T>
+  graph: Graph<T>,
+  recordState: boolean = true
 ): Generator<ConnectedComponentsState<T>, number, unknown> {
   const visited = new Set<T>();
   let componentCount = 0;
@@ -69,29 +74,28 @@ export function* countConnectedComponentsGenerator<T>(
       continue;
     }
 
-    // YIELD the outer loop state
-    yield {
-      componentCount,
-      visitedNodes: new Set(visited),
-      evaluatingNode: startNode
-    };
+    if (recordState) {
+      // YIELD the outer loop state
+      yield {
+        componentCount,
+        visitedNodes: new Set(visited),
+        evaluatingNode: startNode
+      };
+    }
 
-    // If we haven't seen this node, it belongs to a new component
-    if (!visited.has(startNode)) {
-      componentCount++;
+    componentCount++;
 
-      // Initialize the BFS generator for this component
-      const bfs = breadthFirstSearch(graph, startNode, visited);
+    // Initialize the BFS generator for this component
+    const bfs = breadthFirstSearch(graph, startNode, visited, recordState);
 
-      // Consume and YIELD the inner BFS steps so the visualization can animate the traversal
-      for (const step of bfs) {
-        yield {
-          componentCount,
-          visitedNodes: new Set(visited),
-          evaluatingNode: startNode,
-          bfsState: step
-        };
-      }
+    // Consume and YIELD the inner BFS steps so the visualization can animate the traversal
+    for (const step of bfs) {
+      yield {
+        componentCount,
+        visitedNodes: new Set(visited),
+        evaluatingNode: startNode,
+        bfsState: step
+      };
     }
   }
 
@@ -103,12 +107,13 @@ export function* countConnectedComponentsGenerator<T>(
  * Standard utility wrapper to run the generator instantly and just return the count.
  */
 export function countConnectedComponents<T>(graph: Graph<T>): number {
-  const generator = countConnectedComponentsGenerator(graph);
+  const generator = countConnectedComponentsGenerator(graph, false);
   let result = generator.next();
 
-  // Consume the generator entirely
-  while (!result.done) {
-    result = generator.next();
+  if (!result.done) {
+    throw new Error(
+      "Generator should have been exhausted since recordState is false."
+    );
   }
 
   // The final return value of the generator is the component count
