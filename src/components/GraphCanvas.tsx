@@ -182,9 +182,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       .duration(300)
       .attr("fill", (d) => {
         if (d.id === currentNode) return "#ef4444"; // Red: Currently evaluating
-        if (visitedNodes.has(d.id)) return "#10b981"; // Green: Fully Visited
-        if (queuedNodes.has(d.id)) return "#3b82f6"; // Blue: In Queue
-        return "#4338ca"; // Indigo: Unvisited (Default)
+        if (queuedNodes.has(d.id)) return "#FACC15"; // Yellow: In Queue
+        if (visitedNodes.has(d.id)) return "#4338ca"; // Indigo: Fully Visited
+        return "#CBD5E1"; // Indigo: Unvisited (Default)
       })
       .attr("r", (d) => (d.id === currentNode ? 16 : 12))
       .attr("stroke", (d) => (d.id === currentNode ? "#000000" : "#ffffff"));
