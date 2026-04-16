@@ -1,2 +1,5 @@
+# Run lint-staged to format staged files
+npx lint-staged --config lint-staged.config.ts
+
 # For debugging, uncomment the following line
 # exit 1
