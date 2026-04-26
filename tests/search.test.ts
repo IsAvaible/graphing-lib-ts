@@ -7,8 +7,8 @@ import {
 import type { UnweightedEdge } from "../src/core/types";
 
 // Helper function to quickly create unweighted edges for testing
-function edge(to: number): UnweightedEdge<number> {
-  return { kind: "unweighted", to };
+function edge(from: number, to: number): UnweightedEdge<number> {
+  return { kind: "unweighted", from, to };
 }
 
 describe("Graph Algorithms - Search", () => {
@@ -16,12 +16,12 @@ describe("Graph Algorithms - Search", () => {
     const graph = new Graph<number>(false);
 
     // Component 1: 1-2-3 (Triangle)
-    graph.addEdge(1, edge(2));
-    graph.addEdge(2, edge(3));
-    graph.addEdge(3, edge(1));
+    graph.addEdge(edge(1, 2));
+    graph.addEdge(edge(2, 3));
+    graph.addEdge(edge(3, 1));
 
     // Component 2: 4-5 (Line)
-    graph.addEdge(4, edge(5));
+    graph.addEdge(edge(4, 5));
 
     // Component 3: 6 (Isolated)
     graph.addNode(6);
@@ -32,8 +32,8 @@ describe("Graph Algorithms - Search", () => {
   it("should yield the correct step-by-step state during a BFS", () => {
     const graph = new Graph<number>(false);
     // A simple V-shape: 1 connects to 2 and 3.
-    graph.addEdge(1, edge(2));
-    graph.addEdge(1, edge(3));
+    graph.addEdge(edge(1, 2));
+    graph.addEdge(edge(1, 3));
 
     // Initialize the generator
     const bfsGenerator = breadthFirstSearch(graph, 1);

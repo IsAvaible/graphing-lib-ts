@@ -52,17 +52,19 @@ export async function parseGraphFromLines(
       // 2 columns: It's an Unweighted Graph
       const edge: UnweightedEdge<number> = {
         kind: "unweighted",
+        from: parsedEdge.start,
         to: parsedEdge.end
       };
-      graph.addEdge(parsedEdge.start, edge);
+      graph.addEdge(edge);
     } else {
       // 3 columns: It's a Weighted Graph
       const edge: WeightedEdge<number> = {
         kind: "weighted",
+        from: parsedEdge.start,
         to: parsedEdge.end,
         weight: parsedEdge.weight
       };
-      graph.addEdge(parsedEdge.start, edge);
+      graph.addEdge(edge);
     }
   }
 

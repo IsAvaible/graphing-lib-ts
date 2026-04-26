@@ -14,17 +14,17 @@ export class Graph<T = number> {
     }
   }
 
-  addEdge(from: T, edge: Edge<T>): void {
+  addEdge(edge: Edge<T>): void {
     // Ensure both nodes exist
-    this.addNode(from);
+    this.addNode(edge.from);
     this.addNode(edge.to);
 
     // Add the forward edge
-    this.adjacencyList.get(from)!.push(edge);
+    this.adjacencyList.get(edge.from)!.push(edge);
 
     // If undirected, automatically add the reverse edge maintaining all properties
     if (!this.isDirected) {
-      const reverseEdge: Edge<T> = { ...edge, to: from };
+      const reverseEdge: Edge<T> = { ...edge, from: edge.to, to: edge.from };
       this.adjacencyList.get(edge.to)!.push(reverseEdge);
     }
   }
