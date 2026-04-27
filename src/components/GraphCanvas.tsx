@@ -168,6 +168,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     const labels = container
       .append("g")
+      .attr("class", "node-labels-group")
       .selectAll("text")
       .data(nodes)
       .join("text")
@@ -236,6 +237,16 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       .attr("stroke", (d) =>
         d.id === visualState.currentNode ? "#000000" : "#ffffff"
       );
+
+    // Transition label positions to prevent overlap when node grows
+    const labels = svg
+      .select(".node-labels-group")
+      .selectAll<SVGTextElement, GraphNode>("text");
+
+    labels
+      .transition()
+      .duration(300)
+      .attr("dx", (d) => (d.id === visualState.currentNode ? 22 : 15));
 
     // Update Links
     const links = svg
