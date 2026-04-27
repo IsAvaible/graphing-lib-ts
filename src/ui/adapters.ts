@@ -1,6 +1,14 @@
 import { Graph } from "../core/Graph";
 import { countConnectedComponentsGenerator } from "@/algorithms/search.ts";
-import { type VisualState } from "@/ui/types.ts";
+import {
+  primsAlgorithmGenerator,
+  kruskalsAlgorithmGenerator
+} from "@/algorithms/mst.ts";
+import {
+  type VisualState,
+  INITIAL_VISUAL_STATE,
+  getEdgeKey
+} from "@/ui/types.ts";
 
 export function* connectedComponentsVisualizer<T>(
   graph: Graph<T>
@@ -9,19 +17,76 @@ export function* connectedComponentsVisualizer<T>(
 
   for (const state of algorithm) {
     if (state.bfsState) {
-      // Mapping inner BFS traversal to visual state
       yield {
+        ...INITIAL_VISUAL_STATE,
         currentNode: state.bfsState.currentNode,
         visitedNodes: new Set(state.visitedNodes),
         queuedNodes: new Set(state.bfsState.queue)
       };
     } else {
-      // Mapping outer loop evaluation to visual state
       yield {
+        ...INITIAL_VISUAL_STATE,
         currentNode: state.evaluatingNode,
         visitedNodes: new Set(state.visitedNodes),
         queuedNodes: new Set()
       };
     }
+  }
+}
+
+export function* primVisualizer<T extends string | number>(
+  graph: Graph<T>
+): Generator<VisualState<T>, void, unknown> {
+  const algorithm = primsAlgorithmGenerator(graph);
+
+  for (const state of algorithm) {
+    const mstEdges = new Set(
+      state.mstEdges.map((e) => getEdgeKey(e.from, e.to))
+    );
+    const availableEdges = new Set(
+      state.availableEdges.map((e) => getEdgeKey(e.from, e.to))
+    );
+    const evaluatingEdge = state.evaluatingEdge
+      ? getEdgeKey(state.evaluatingEdge.from, state.evaluatingEdge.to)
+      : null;
+
+    yield {
+      ...INITIAL_VISUAL_STATE,
+      visitedNodes: new Set(state.visitedNodes),
+      // Set the current node to the one we're evaluating the edge towards
+      currentNode: state.evaluatingEdge ? state.evaluatingEdge.to : null,
+      mstEdges,
+      availableEdges,
+      evaluatingEdge
+    };
+  }
+}
+
+export function* kruskalVisualizer<T extends string | number>(
+  graph: Graph<T>
+): Generator<VisualState<T>, void, unknown> {
+  const algorithm = kruskalsAlgorithmGenerator(graph);
+
+  for (const state of algorithm) {
+    const mstEdges = new Set(
+      state.mstEdges.map((e) => getEdgeKey(e.from, e.to))
+    );
+    const evaluatingEdge = state.evaluatingEdge
+      ? getEdgeKey(state.evaluatingEdge.from, state.evaluatingEdge.to)
+      : null;
+
+    // In Kruskal's, any node that is part of an MST edge can be considered "visited" visually
+    const visitedNodes = new Set<T>();
+    for (const e of state.mstEdges) {
+      visitedNodes.add(e.from);
+      visitedNodes.add(e.to);
+    }
+
+    yield {
+      ...INITIAL_VISUAL_STATE,
+      visitedNodes,
+      mstEdges,
+      evaluatingEdge
+    };
   }
 }

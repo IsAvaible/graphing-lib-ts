@@ -1,12 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import { Graph } from "../core/Graph";
+import { getEdgeKey, type VisualState } from "@/ui/types.ts";
 
 interface GraphCanvasProps {
   graph: Graph<number> | null;
-  visitedNodes?: Set<number>;
-  currentNode?: number | null;
-  queuedNodes?: Set<number>;
+  visualState: VisualState<number>; // Passing the whole object is much cleaner now
 }
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -16,13 +15,12 @@ interface GraphNode extends d3.SimulationNodeDatum {
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   source: number | GraphNode;
   target: number | GraphNode;
+  weight?: number; // Added to store weight for display
 }
 
 export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   graph,
-  visitedNodes = new Set(),
-  currentNode = null,
-  queuedNodes = new Set()
+  visualState
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -80,9 +78,20 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     const nodes: GraphNode[] = graph.getNodes().map((id) => ({ id }));
     const links: GraphLink[] = [];
 
+    // To prevent duplicate undirected links from rendering twice over each other:
+    const seenLinks = new Set<string>();
     for (const nodeId of graph.getNodes()) {
       for (const edge of graph.getNeighbors(nodeId)) {
-        links.push({ source: nodeId, target: edge.to });
+        const key = getEdgeKey(nodeId, edge.to);
+        if (!seenLinks.has(key)) {
+          seenLinks.add(key);
+          const link: GraphLink = { source: nodeId, target: edge.to };
+          // Only assign weight if it's a weighted edge type
+          if (edge.kind === "weighted") {
+            link.weight = edge.weight;
+          }
+          links.push(link);
+        }
       }
     }
 
@@ -118,12 +127,31 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     const link = container
       .append("g")
+      .attr("class", "links-group")
       .selectAll("line")
       .data(links)
       .join("line")
-      .attr("stroke", "#1f2937")
-      .attr("stroke-opacity", 0.6)
+      .attr("stroke", "#e2e8f0")
+      .attr("stroke-opacity", 0.8)
       .attr("stroke-width", 2);
+
+    // Add Edge Labels for weighted edges
+    const edgeLabels = container
+      .append("g")
+      .attr("class", "edge-labels-group")
+      .selectAll("text")
+      .data(links.filter((l) => l.weight !== undefined)) // Only render if weight exists
+      .join("text")
+      .text((d) => d.weight!)
+      .attr("font-size", 11)
+      .attr("font-weight", "500")
+      .attr("fill", "#64748b")
+      .attr("text-anchor", "middle")
+      // Adding a subtle white outline makes it much easier to read over the links
+      .attr("stroke", "#ffffff")
+      .attr("stroke-width", 3)
+      .attr("paint-order", "stroke")
+      .style("pointer-events", "none");
 
     const node = container
       .append("g")
@@ -132,11 +160,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       .data(nodes)
       .join("circle")
       .attr("r", 12)
-      .attr("fill", "#4338ca") // Default color
+      .attr("fill", "#cbd5e1")
       .attr("stroke", "#ffffff")
       .attr("stroke-width", 2)
       .attr("cursor", "pointer")
-      .call(drag); // Attach node dragging
+      .call(drag);
 
     const labels = container
       .append("g")
@@ -159,6 +187,24 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
       node.attr("cx", (d) => d.x ?? 0).attr("cy", (d) => d.y ?? 0);
       labels.attr("x", (d) => d.x ?? 0).attr("y", (d) => d.y ?? 0);
+
+      // Keep edge labels centered on the link
+      edgeLabels
+        .attr(
+          "x",
+          (d) =>
+            (((d.source as GraphNode).x ?? 0) +
+              ((d.target as GraphNode).x ?? 0)) /
+            2
+        )
+        .attr(
+          "y",
+          (d) =>
+            (((d.source as GraphNode).y ?? 0) +
+              ((d.target as GraphNode).y ?? 0)) /
+              2 -
+            4
+        ); // Lift slightly off dead-center
     });
 
     return () => {
@@ -181,14 +227,43 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       .transition()
       .duration(300)
       .attr("fill", (d) => {
-        if (d.id === currentNode) return "#ef4444"; // Red: Currently evaluating
-        if (queuedNodes.has(d.id)) return "#FACC15"; // Yellow: In Queue
-        if (visitedNodes.has(d.id)) return "#4338ca"; // Indigo: Fully Visited
-        return "#CBD5E1"; // Indigo: Unvisited (Default)
+        if (d.id === visualState.currentNode) return "#ef4444"; // Red: Evaluating
+        if (visualState.queuedNodes.has(d.id)) return "#facc15"; // Yellow: Queued
+        if (visualState.visitedNodes.has(d.id)) return "#4338ca"; // Indigo: Visited
+        return "#cbd5e1"; // Unvisited
       })
-      .attr("r", (d) => (d.id === currentNode ? 16 : 12))
-      .attr("stroke", (d) => (d.id === currentNode ? "#000000" : "#ffffff"));
-  }, [visitedNodes, currentNode, queuedNodes]);
+      .attr("r", (d) => (d.id === visualState.currentNode ? 16 : 12))
+      .attr("stroke", (d) =>
+        d.id === visualState.currentNode ? "#000000" : "#ffffff"
+      );
+
+    // Update Links
+    const links = svg
+      .select(".links-group")
+      .selectAll<SVGLineElement, GraphLink>("line");
+    links
+      .transition()
+      .duration(300)
+      .attr("stroke", (d) => {
+        const sourceId = typeof d.source === "object" ? d.source.id : d.source;
+        const targetId = typeof d.target === "object" ? d.target.id : d.target;
+        const key = getEdgeKey(sourceId, targetId);
+
+        if (key === visualState.evaluatingEdge) return "#f97316"; // Orange: Evaluating
+        if (visualState.mstEdges.has(key)) return "#22c55e"; // Green: MST Confirmed
+        if (visualState.availableEdges.has(key)) return "#facc15"; // Yellow: Frontier (Prim's)
+        return "#e2e8f0"; // Default
+      })
+      .attr("stroke-width", (d) => {
+        const sourceId = typeof d.source === "object" ? d.source.id : d.source;
+        const targetId = typeof d.target === "object" ? d.target.id : d.target;
+        const key = getEdgeKey(sourceId, targetId);
+
+        if (key === visualState.evaluatingEdge || visualState.mstEdges.has(key))
+          return 4;
+        return 2;
+      });
+  }, [visualState]);
 
   return (
     <div className="grow bg-white overflow-hidden relative">

@@ -4,7 +4,8 @@ import { type VisualState, INITIAL_VISUAL_STATE } from "@/ui/types.ts";
 type GeneratorFactory<T> = () => Generator<VisualState<T>, any, unknown> | null;
 
 export function useAlgorithmRunner<T>(
-  generatorFactory: GeneratorFactory<T> | null
+  generatorFactory: GeneratorFactory<T> | null,
+  intervalMs: number = 600
 ) {
   const [visualState, setVisualState] =
     useState<VisualState<T>>(INITIAL_VISUAL_STATE);
@@ -51,14 +52,14 @@ export function useAlgorithmRunner<T>(
 
   useEffect(() => {
     if (isPlaying) {
-      timerRef.current = setInterval(stepForward, 600);
+      timerRef.current = setInterval(stepForward, intervalMs);
     } else if (timerRef.current) {
       clearInterval(timerRef.current);
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying, stepForward]);
+  }, [isPlaying, stepForward, intervalMs]);
 
   return {
     visualState,
