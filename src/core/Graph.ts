@@ -2,7 +2,7 @@ import type { Edge } from "./types";
 
 export class Graph<T = number> {
   private adjacencyList: Map<T, Edge<T>[]> = new Map();
-  private readonly isDirected: boolean;
+  public readonly isDirected: boolean;
 
   constructor(isDirected: boolean = false) {
     this.isDirected = isDirected;
