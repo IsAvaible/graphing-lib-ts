@@ -261,8 +261,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         const key = getEdgeKey(sourceId, targetId);
 
         if (key === visualState.evaluatingEdge) return "#f97316"; // Orange: Evaluating
-        if (visualState.mstEdges.has(key)) return "#22c55e"; // Green: MST Confirmed
-        if (visualState.availableEdges.has(key)) return "#facc15"; // Yellow: Frontier (Prim's)
+        if (visualState.highlightedEdges.has(key)) return "#22c55e"; // Green: Highlighted
+        if (visualState.frontierEdges.has(key)) return "#facc15"; // Yellow: Frontier
         return "#e2e8f0"; // Default
       })
       .attr("stroke-width", (d) => {
@@ -270,7 +270,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         const targetId = typeof d.target === "object" ? d.target.id : d.target;
         const key = getEdgeKey(sourceId, targetId);
 
-        if (key === visualState.evaluatingEdge || visualState.mstEdges.has(key))
+        if (
+          key === visualState.evaluatingEdge ||
+          visualState.highlightedEdges.has(key)
+        )
           return 4;
         return 2;
       });

@@ -55,8 +55,8 @@ export function* primVisualizer<T extends string | number>(
       visitedNodes: new Set(state.visitedNodes),
       // Set the current node to the one we're evaluating the edge towards
       currentNode: state.evaluatingEdge ? state.evaluatingEdge.to : null,
-      mstEdges,
-      availableEdges,
+      highlightedEdges: mstEdges,
+      frontierEdges: availableEdges,
       evaluatingEdge
     };
   }
@@ -85,7 +85,7 @@ export function* kruskalVisualizer<T extends string | number>(
     yield {
       ...INITIAL_VISUAL_STATE,
       visitedNodes,
-      mstEdges,
+      highlightedEdges: mstEdges,
       evaluatingEdge
     };
   }
