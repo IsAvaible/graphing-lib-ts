@@ -8,6 +8,7 @@ import {
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
 import { GraphCanvas } from "@/components/GraphCanvas.tsx";
+import { SubWindow } from "@/components/SubWindow.tsx";
 import {
   Select,
   SelectContent,
@@ -44,7 +45,7 @@ export const App: React.FC = () => {
     useAlgorithmRunner(algorithmFactory, delayMs[0]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50 relative">
       <TopBar
         onGraphLoaded={setGraph}
         onPlayPause={togglePlay}
@@ -93,7 +94,18 @@ export const App: React.FC = () => {
         </div>
       )}
 
+      {/* Main Visualizer */}
       <GraphCanvas graph={graph} visualState={visualState} />
+
+      {/* Conditionally Render SubWindow for Algorithms running Sub-Routines */}
+      {graph && visualState.subVisualState && (
+        <SubWindow title="Sub-Visual State">
+          <GraphCanvas
+            graph={visualState.subGraph || graph}
+            visualState={visualState.subVisualState}
+          />
+        </SubWindow>
+      )}
     </div>
   );
 };

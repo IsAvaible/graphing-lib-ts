@@ -115,7 +115,7 @@ describe("Graph Algorithms - Minimum Spanning Tree (MST)", () => {
 
     it("should yield the correct step-by-step state during Kruskal's Algorithm", () => {
       const graph = buildTestGraph();
-      const kruskalGenerator = kruskalsAlgorithmGenerator(graph, true);
+      const kruskalGenerator = kruskalsAlgorithmGenerator(graph, true, false);
 
       // --- STEP 1 ---
       // Globally sorted edges. Smallest is 1-2 (wt 1).

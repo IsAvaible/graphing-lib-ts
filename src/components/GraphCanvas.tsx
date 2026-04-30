@@ -22,14 +22,17 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   graph,
   visualState
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Handles Physics, Zoom, and initial DOM creation
   useEffect(() => {
-    if (!graph || !svgRef.current) return;
+    if (!graph || !svgRef.current || !containerRef.current) return;
 
-    const width = window.innerWidth;
-    const height = window.innerHeight - 80; // Subtract TopBar height
+    let currentWidth = containerRef.current.clientWidth;
+    let currentHeight = containerRef.current.clientHeight;
+    const initialWidth = currentWidth;
+    const initialHeight = currentHeight;
     const svg = d3.select(svgRef.current);
 
     svg.selectAll("*").remove(); // Clear previous render
@@ -105,7 +108,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           .distance(80)
       )
       .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(width / 2, height / 2));
+      .force("center", d3.forceCenter(initialWidth / 2, initialHeight / 2));
 
     // Setup Node Dragging behavior
     const drag = d3
@@ -208,8 +211,58 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         ); // Lift slightly off dead-center
     });
 
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries.length) return;
+      const { width, height } = entries[0].contentRect;
+
+      // Ignore phantom resizes when dimensions are 0
+      if (width === 0 || height === 0) return;
+
+      // 1. Update the internal zoom extent so boundaries remain correct
+      zoom.extent([
+        [0, 0],
+        [width, height]
+      ]);
+
+      const svgNode = svg.node();
+      if (svgNode) {
+        const t = d3.zoomTransform(svgNode);
+
+        // Calculate new scale from diagonal ratio
+        const currentDiagonal = Math.hypot(currentWidth, currentHeight);
+        const newDiagonal = Math.hypot(width, height);
+        const scaleRatio = newDiagonal / currentDiagonal;
+
+        // Get scale limits
+        const [minZoom, maxZoom] = zoom.scaleExtent();
+        const newK = Math.max(minZoom, Math.min(maxZoom, t.k * scaleRatio));
+
+        // Find Center
+        const dataCenterX = (currentWidth / 2 - t.x) / t.k;
+        const dataCenterY = (currentHeight / 2 - t.y) / t.k;
+
+        // Calculate translation
+        const newTx = width / 2 - dataCenterX * newK;
+        const newTy = height / 2 - dataCenterY * newK;
+
+        // Apply calculated transform
+        const newTransform = d3.zoomIdentity
+          .translate(newTx, newTy)
+          .scale(newK);
+        svg.call(zoom.transform, newTransform);
+      }
+
+      // 6. Update trackers for the next resize event
+      currentWidth = width;
+      currentHeight = height;
+    });
+
+    // Start observing the wrapper div
+    resizeObserver.observe(containerRef.current);
+
     return () => {
       simulation.stop();
+      resizeObserver.disconnect();
     };
   }, [graph]);
 
@@ -280,7 +333,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   }, [visualState]);
 
   return (
-    <div className="grow bg-white overflow-hidden relative">
+    <div
+      ref={containerRef}
+      className="w-full h-full grow bg-white overflow-hidden relative"
+    >
       <svg ref={svgRef} className="w-full h-full"></svg>
       {!graph && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

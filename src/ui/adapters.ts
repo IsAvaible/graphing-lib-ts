@@ -67,6 +67,10 @@ export function* kruskalVisualizer<T extends string | number>(
 ): Generator<VisualState<T>, void, unknown> {
   const algorithm = kruskalsAlgorithmGenerator(graph);
 
+  // Cache the subGraph object to prevent D3 from re-rendering layout coordinates
+  let lastSubGraph: Graph<T> | undefined;
+  let lastSubGraphKey = "";
+
   for (const state of algorithm) {
     const mstEdges = new Set(
       state.mstEdges.map((e) => getEdgeKey(e.from, e.to))
@@ -75,18 +79,53 @@ export function* kruskalVisualizer<T extends string | number>(
       ? getEdgeKey(state.evaluatingEdge.from, state.evaluatingEdge.to)
       : null;
 
-    // In Kruskal's, any node that is part of an MST edge can be considered "visited" visually
     const visitedNodes = new Set<T>();
     for (const e of state.mstEdges) {
       visitedNodes.add(e.from);
       visitedNodes.add(e.to);
     }
 
+    let subGraph = lastSubGraph;
+    let subVisualState: VisualState<T> | null = null;
+
+    if (state.ufState) {
+      // Build a unique key to determine if structural nodes/edges changed
+      const nodesKey = Array.from(state.ufState.activeNodes).sort().join(",");
+      const edgesKey = state.ufState.activeEdges
+        .map((e) => getEdgeKey(e.from, e.to))
+        .sort()
+        .join(",");
+      const currentKey = `${nodesKey}|${edgesKey}`;
+
+      // Only re-instantiate the graph if the architecture changed (e.g. compression hit)
+      if (currentKey !== lastSubGraphKey) {
+        subGraph = new Graph<T>();
+        state.ufState.activeNodes.forEach((n) => subGraph!.addNode(n));
+        state.ufState.activeEdges.forEach((edge) => {
+          subGraph!.addEdge({ ...edge, kind: "unweighted" });
+        });
+        lastSubGraphKey = currentKey;
+        lastSubGraph = subGraph;
+      }
+
+      subVisualState = {
+        ...INITIAL_VISUAL_STATE,
+        currentNode: state.ufState.currentNode
+      };
+    } else {
+      // Clean up subset window when the state is cleared
+      subGraph = undefined;
+      lastSubGraph = undefined;
+      lastSubGraphKey = "";
+    }
+
     yield {
       ...INITIAL_VISUAL_STATE,
       visitedNodes,
       highlightedEdges: mstEdges,
-      evaluatingEdge
+      evaluatingEdge,
+      subGraph,
+      subVisualState
     };
   }
 }

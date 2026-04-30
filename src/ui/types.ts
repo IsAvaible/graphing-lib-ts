@@ -1,3 +1,5 @@
+import type { Graph } from "@/core/Graph.ts";
+
 export interface VisualState<T> {
   visitedNodes: Set<T>;
   queuedNodes: Set<T>;
@@ -5,6 +7,8 @@ export interface VisualState<T> {
   highlightedEdges: Set<EdgeKey>;
   frontierEdges: Set<EdgeKey>;
   evaluatingEdge: EdgeKey | null;
+  subVisualState: VisualState<T> | null; // This will be rendered in a subwindow,
+  subGraph?: Graph<T> | null;
 }
 
 export const INITIAL_VISUAL_STATE: VisualState<any> = {
@@ -13,7 +17,9 @@ export const INITIAL_VISUAL_STATE: VisualState<any> = {
   currentNode: null,
   highlightedEdges: new Set(),
   frontierEdges: new Set(),
-  evaluatingEdge: null
+  evaluatingEdge: null,
+  subVisualState: null,
+  subGraph: null
 };
 
 export type EdgeKey = string & { readonly __brand: unique symbol };

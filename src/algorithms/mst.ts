@@ -1,5 +1,7 @@
 import { Graph } from "../core/Graph";
 import type { WeightedEdge } from "../core/types";
+import { MinPriorityQueue } from "@/algorithms/datastructures/MinPriorityQueue.ts";
+import { UnionFind } from "@/algorithms/datastructures/UnionFind.ts";
 
 /**
  * Represents a snapshot of Prim's algorithm at a specific step.
@@ -21,128 +23,11 @@ export interface KruskalState<T extends string | number> {
   evaluatingEdge: WeightedEdge<T> | null;
   edgesProcessed: number;
   totalEdges: number;
-}
-
-/**
- * Internal Min-Priority Queue for Prim's Algorithm optimization ($O(\log V)$ insertions/extractions).
- */
-class MinPriorityQueue<T extends string | number> {
-  private heap: WeightedEdge<T>[] = [];
-
-  push(edge: WeightedEdge<T>): void {
-    this.heap.push(edge);
-    this.bubbleUp(this.heap.length - 1);
-  }
-
-  pop(): WeightedEdge<T> | undefined {
-    if (this.heap.length === 0) return undefined;
-    if (this.heap.length === 1) return this.heap.pop();
-
-    const top = this.heap[0];
-    this.heap[0] = this.heap.pop()!;
-    this.sinkDown(0);
-    return top;
-  }
-
-  isEmpty(): boolean {
-    return this.heap.length === 0;
-  }
-
-  /**
-   * Returns a shallow copy of the underlying heap array for state recording.
-   */
-  toArray(): WeightedEdge<T>[] {
-    return [...this.heap];
-  }
-
-  private bubbleUp(index: number): void {
-    let curr = index;
-    while (curr > 0) {
-      const parent = Math.floor((curr - 1) / 2);
-      if (this.heap[curr].weight >= this.heap[parent].weight) break;
-      this.swap(curr, parent);
-      curr = parent;
-    }
-  }
-
-  private sinkDown(index: number): void {
-    let curr = index;
-    const length = this.heap.length;
-
-    while (true) {
-      let left = 2 * curr + 1;
-      let right = 2 * curr + 2;
-      let smallest = curr;
-
-      if (
-        left < length &&
-        this.heap[left].weight < this.heap[smallest].weight
-      ) {
-        smallest = left;
-      }
-      if (
-        right < length &&
-        this.heap[right].weight < this.heap[smallest].weight
-      ) {
-        smallest = right;
-      }
-
-      if (smallest === curr) break;
-      this.swap(curr, smallest);
-      curr = smallest;
-    }
-  }
-
-  private swap(i: number, j: number): void {
-    const temp = this.heap[i];
-    this.heap[i] = this.heap[j];
-    this.heap[j] = temp;
-  }
-}
-
-/**
- * Internal Union-Find (Disjoint Set) utility for Kruskal's Cycle Detection.
- */
-class UnionFind<T extends string | number> {
-  private parent: Map<T, T> = new Map();
-  private rank: Map<T, number> = new Map(); // Optimization: Union-by-Rank
-
-  add(element: T): void {
-    if (!this.parent.has(element)) {
-      this.parent.set(element, element);
-      this.rank.set(element, 0);
-    }
-  }
-
-  find(element: T): T {
-    // Optimization: Standard recursive path compression
-    const p = this.parent.get(element)!;
-    if (p !== element) {
-      this.parent.set(element, this.find(p));
-    }
-    return this.parent.get(element)!;
-  }
-
-  union(a: T, b: T): boolean {
-    const rootA = this.find(a);
-    const rootB = this.find(b);
-    if (rootA !== rootB) {
-      const rankA = this.rank.get(rootA)!;
-      const rankB = this.rank.get(rootB)!;
-
-      // Optimization: Union by rank keeps the trees balanced
-      if (rankA < rankB) {
-        this.parent.set(rootA, rootB);
-      } else if (rankA > rankB) {
-        this.parent.set(rootB, rootA);
-      } else {
-        this.parent.set(rootB, rootA);
-        this.rank.set(rootA, rankA + 1);
-      }
-      return true; // Union successful (no cycle)
-    }
-    return false; // Cycle detected
-  }
+  ufState?: {
+    currentNode: T;
+    activeNodes: Set<T>;
+    activeEdges: { from: T; to: T }[];
+  };
 }
 
 /**
@@ -216,7 +101,8 @@ export function* primsAlgorithmGenerator<T extends string | number>(
  */
 export function* kruskalsAlgorithmGenerator<T extends string | number>(
   graph: Graph<T>,
-  recordState: boolean = true
+  recordState: boolean = true,
+  recordSubState: boolean = true
 ): Generator<KruskalState<T>, WeightedEdge<T>[], unknown> {
   const nodes = graph.getNodes();
   const uf = new UnionFind<T>();
@@ -229,15 +115,14 @@ export function* kruskalsAlgorithmGenerator<T extends string | number>(
   for (const node of nodes) {
     for (const edge of graph.getNeighbors(node)) {
       if (edge.kind === "weighted") {
-        // Optimization: Deduplicate undirected edges to halve sorting workload in undirected graphs
-        if (graph.isDirected || edge.from < edge.to) {
+        // Optimization: Deduplicate edges to halve sorting workload
+        if (edge.from < edge.to) {
           allEdges.push({ ...edge });
         }
       }
     }
   }
-
-  // Kruskal's requires sorting all edges by weight globally
+  // Sort all edges by weight globally
   allEdges.sort((a, b) => a.weight - b.weight);
 
   const mstEdges: WeightedEdge<T>[] = [];
@@ -246,18 +131,49 @@ export function* kruskalsAlgorithmGenerator<T extends string | number>(
   for (const edge of allEdges) {
     edgesProcessed++;
 
-    if (recordState) {
+    if (recordState && recordSubState) {
+      const unionGen = uf.unionStepGenerator(edge.from, edge.to);
+      let result = unionGen.next();
+
+      // Funnel all sub-routine updates directly to the outer observer
+      while (!result.done) {
+        yield {
+          mstEdges: [...mstEdges],
+          evaluatingEdge: edge,
+          edgesProcessed,
+          totalEdges: allEdges.length,
+          ufState: result.value
+        };
+        result = unionGen.next();
+      }
+
+      // Add edge if accepted
+      if (result.value) {
+        mstEdges.push(edge);
+      }
+
+      // Let the evaluating edge clear visually before pulling the next edge
       yield {
         mstEdges: [...mstEdges],
-        evaluatingEdge: edge,
+        evaluatingEdge: null,
         edgesProcessed,
         totalEdges: allEdges.length
       };
-    }
+    } else {
+      if (recordState) {
+        // Yield only the high-level Kruskal state
+        yield {
+          mstEdges: [...mstEdges],
+          evaluatingEdge: edge,
+          edgesProcessed,
+          totalEdges: allEdges.length
+        };
+      }
 
-    // The Union-Find check naturally rejects cycles
-    if (uf.union(edge.from, edge.to)) {
-      mstEdges.push(edge);
+      // Perform union without substate tracking
+      if (uf.union(edge.from, edge.to)) {
+        mstEdges.push(edge);
+      }
     }
   }
 
@@ -287,7 +203,7 @@ export function primsAlgorithm<T extends string | number>(
 export function kruskalsAlgorithm<T extends string | number>(
   graph: Graph<T>
 ): WeightedEdge<T>[] {
-  const generator = kruskalsAlgorithmGenerator(graph, false);
+  const generator = kruskalsAlgorithmGenerator(graph, false, false);
   let result = generator.next();
 
   while (!result.done) {
