@@ -17,8 +17,8 @@ describe("Core Graph Structure", () => {
   it("should correctly mirror edges in an undirected graph", () => {
     const graph = new Graph<number>(false);
 
-    const edge: UnweightedEdge<number> = { kind: "unweighted", to: 2 };
-    graph.addEdge(1, edge);
+    const edge: UnweightedEdge<number> = { kind: "unweighted", from: 1, to: 2 };
+    graph.addEdge(edge);
 
     // Node 1 should point to Node 2
     const neighborsOf1 = graph.getNeighbors(1);
@@ -37,10 +37,11 @@ describe("Core Graph Structure", () => {
 
     const edge: WeightedEdge<string> = {
       kind: "weighted",
+      from: "A",
       to: "B",
       weight: 10
     };
-    graph.addEdge("A", edge);
+    graph.addEdge(edge);
 
     expect(graph.getNeighbors("A")).toHaveLength(1);
     expect(graph.getNeighbors("A")[0].kind).toBe("weighted");
