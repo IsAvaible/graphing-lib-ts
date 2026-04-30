@@ -69,7 +69,6 @@ export function* kruskalVisualizer<T extends string | number>(
 
   // Cache the subGraph object to prevent D3 from re-rendering layout coordinates
   let lastSubGraph: Graph<T> | undefined;
-  let lastSubGraphKey = "";
 
   for (const state of algorithm) {
     const mstEdges = new Set(
@@ -89,34 +88,18 @@ export function* kruskalVisualizer<T extends string | number>(
     let subVisualState: VisualState<T> | null = null;
 
     if (state.ufState) {
-      // Build a unique key to determine if structural nodes/edges changed
-      const nodesKey = Array.from(state.ufState.activeNodes).sort().join(",");
-      const edgesKey = state.ufState.activeEdges
-        .map((e) => getEdgeKey(e.from, e.to))
-        .sort()
-        .join(",");
-      const currentKey = `${nodesKey}|${edgesKey}`;
-
-      // Only re-instantiate the graph if the architecture changed (e.g. compression hit)
-      if (currentKey !== lastSubGraphKey) {
-        subGraph = new Graph<T>();
-        state.ufState.activeNodes.forEach((n) => subGraph!.addNode(n));
-        state.ufState.activeEdges.forEach((edge) => {
-          subGraph!.addEdge({ ...edge, kind: "unweighted" });
-        });
-        lastSubGraphKey = currentKey;
-        lastSubGraph = subGraph;
-      }
+      subGraph = new Graph<T>();
+      state.ufState.activeNodes.forEach((n) => subGraph!.addNode(n));
+      state.ufState.activeEdges.forEach((edge) => {
+        subGraph!.addEdge({ ...edge, kind: "unweighted" });
+      });
 
       subVisualState = {
         ...INITIAL_VISUAL_STATE,
         currentNode: state.ufState.currentNode
       };
     } else {
-      // Clean up subset window when the state is cleared
       subGraph = undefined;
-      lastSubGraph = undefined;
-      lastSubGraphKey = "";
     }
 
     yield {

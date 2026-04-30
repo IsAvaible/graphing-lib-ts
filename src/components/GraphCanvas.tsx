@@ -18,6 +18,10 @@ interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   weight?: number; // Added to store weight for display
 }
 
+// Helper to reliably get IDs whether D3 has populated the object or not
+const getId = (node: number | GraphNode) =>
+  typeof node === "object" ? node.id : node;
+
 export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   graph,
   visualState
@@ -25,17 +29,20 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
+  const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(
+    null
+  );
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+
   // Handles Physics, Zoom, and initial DOM creation
   useEffect(() => {
-    if (!graph || !svgRef.current || !containerRef.current) return;
+    if (!svgRef.current || !containerRef.current) return;
 
-    let currentWidth = containerRef.current.clientWidth;
-    let currentHeight = containerRef.current.clientHeight;
-    const initialWidth = currentWidth;
-    const initialHeight = currentHeight;
     const svg = d3.select(svgRef.current);
-
     svg.selectAll("*").remove(); // Clear previous render
+
+    const width = containerRef.current.clientWidth;
+    const height = containerRef.current.clientHeight;
 
     // Define grid pattern
     const defs = svg.append("defs");
@@ -64,6 +71,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     // Create a master container for the graph elements
     const container = svg.append("g").attr("class", "graph-container");
 
+    // Static layer groups to keep rendering order correct
+    container.append("g").attr("class", "links-group");
+    container.append("g").attr("class", "edge-labels-group");
+    container.append("g").attr("class", "nodes-group");
+    container.append("g").attr("class", "node-labels-group");
+
     // Setup Zoom and Canvas Panning
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
@@ -77,38 +90,132 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       });
 
     svg.call(zoom);
-
-    const nodes: GraphNode[] = graph.getNodes().map((id) => ({ id }));
-    const links: GraphLink[] = [];
-
-    // To prevent duplicate undirected links from rendering twice over each other:
-    const seenLinks = new Set<string>();
-    for (const nodeId of graph.getNodes()) {
-      for (const edge of graph.getNeighbors(nodeId)) {
-        const key = getEdgeKey(nodeId, edge.to);
-        if (!seenLinks.has(key)) {
-          seenLinks.add(key);
-          const link: GraphLink = { source: nodeId, target: edge.to };
-          // Only assign weight if it's a weighted edge type
-          if (edge.kind === "weighted") {
-            link.weight = edge.weight;
-          }
-          links.push(link);
-        }
-      }
-    }
+    zoomRef.current = zoom;
 
     const simulation = d3
-      .forceSimulation<GraphNode>(nodes)
+      .forceSimulation<GraphNode>([])
       .force(
         "link",
         d3
-          .forceLink<GraphNode, GraphLink>(links)
+          .forceLink<GraphNode, GraphLink>([])
           .id((d) => d.id)
           .distance(80)
       )
       .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(initialWidth / 2, initialHeight / 2));
+      .force("center", d3.forceCenter(width / 2, height / 2));
+
+    simulation.on("tick", () => {
+      container
+        .select(".links-group")
+        .selectAll<SVGLineElement, GraphLink>("line")
+        .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
+        .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
+        .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
+        .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
+
+      container
+        .select(".nodes-group")
+        .selectAll<SVGCircleElement, GraphNode>("circle")
+        .attr("cx", (d) => d.x ?? 0)
+        .attr("cy", (d) => d.y ?? 0);
+
+      container
+        .select(".node-labels-group")
+        .selectAll<SVGTextElement, GraphNode>("text")
+        .attr("x", (d) => d.x ?? 0)
+        .attr("y", (d) => d.y ?? 0);
+
+      // Keep edge labels centered on the link
+      container
+        .select(".edge-labels-group")
+        .selectAll<SVGTextElement, GraphLink>("text")
+        .attr("x", (d) => {
+          const s = d.source as GraphNode;
+          const t = d.target as GraphNode;
+          return ((s.x ?? 0) + (t.x ?? 0)) / 2;
+        })
+        .attr("y", (d) => {
+          const s = d.source as GraphNode;
+          const t = d.target as GraphNode;
+          return ((s.y ?? 0) + (t.y ?? 0)) / 2 - 4; // Lift slightly off dead-center
+        });
+    });
+
+    simulationRef.current = simulation;
+
+    return () => {
+      simulation.stop();
+      svg.on(".zoom", null);
+    };
+  }, []);
+
+  // Handles data updates for the graph nodes and links (Enter, Update, Exit)
+  useEffect(() => {
+    if (!simulationRef.current || !svgRef.current) return;
+    const svg = d3.select(svgRef.current);
+    const container = svg.select(".graph-container");
+    const simulation = simulationRef.current;
+
+    const newNodesData: GraphNode[] = [];
+    const newLinksData: GraphLink[] = [];
+    let topologyChanged = false; // Track if we actually need to reheat the physics
+
+    if (graph) {
+      // Map existing nodes AND links by exact object reference
+      const existingNodes = new Map(simulation.nodes().map((n) => [n.id, n]));
+
+      const currentLinks =
+        simulation.force<d3.ForceLink<GraphNode, GraphLink>>("link")?.links() ||
+        [];
+      const existingLinks = new Map(
+        currentLinks.map((l) => [
+          getEdgeKey(getId(l.source), getId(l.target)),
+          l
+        ])
+      );
+
+      // Preserve exact node objects
+      graph.getNodes().forEach((id) => {
+        const existing = existingNodes.get(id);
+        if (existing) {
+          newNodesData.push(existing); // Do NOT spread ({...existing}), keep exact reference
+        } else {
+          newNodesData.push({ id });
+          topologyChanged = true;
+        }
+      });
+
+      // Preserve exact link objects
+      const seenLinks = new Set<string>();
+      for (const nodeId of graph.getNodes()) {
+        for (const edge of graph.getNeighbors(nodeId)) {
+          const key = getEdgeKey(nodeId, edge.to);
+          if (!seenLinks.has(key)) {
+            seenLinks.add(key);
+
+            const existingLink = existingLinks.get(key);
+            if (existingLink) {
+              // Just update the weight, keep the D3 object intact
+              if (edge.kind === "weighted") existingLink.weight = edge.weight;
+              newLinksData.push(existingLink);
+            } else {
+              const link: GraphLink = { source: nodeId, target: edge.to };
+              if (edge.kind === "weighted") link.weight = edge.weight;
+              newLinksData.push(link);
+              topologyChanged = true;
+            }
+          }
+        }
+      }
+
+      // Check for deletions
+      if (
+        existingNodes.size !== newNodesData.length ||
+        existingLinks.size !== newLinksData.length
+      ) {
+        topologyChanged = true;
+      }
+    }
 
     // Setup Node Dragging behavior
     const drag = d3
@@ -128,157 +235,126 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         d.fy = null;
       });
 
-    const link = container
-      .append("g")
-      .attr("class", "links-group")
-      .selectAll("line")
-      .data(links)
-      .join("line")
-      .attr("stroke", "#e2e8f0")
-      .attr("stroke-opacity", 0.8)
-      .attr("stroke-width", 2);
+    // ----- ENTER / UPDATE / EXIT PATTERNS ----- //
+    container
+      .select(".nodes-group")
+      .selectAll<SVGCircleElement, GraphNode>("circle")
+      .data(newNodesData, (d) => d.id)
+      .join(
+        (enter) =>
+          enter
+            .append("circle")
+            .attr("r", 0)
+            .attr("fill", "#cbd5e1")
+            .attr("stroke", "#ffffff")
+            .attr("stroke-width", 2)
+            .attr("cursor", "pointer")
+            .call(drag)
+            .call((e) => e.transition().duration(300).attr("r", 12)),
+        (update) => update,
+        (exit) =>
+          exit.call((e) => e.transition().duration(300).attr("r", 0).remove())
+      );
+
+    container
+      .select(".node-labels-group")
+      .selectAll<SVGTextElement, GraphNode>("text")
+      .data(newNodesData, (d) => d.id)
+      .join(
+        (enter) =>
+          enter
+            .append("text")
+            .text((d) => d.id)
+            .attr("font-size", 12)
+            .attr("font-weight", "600")
+            .attr("dx", 15)
+            .attr("dy", 4)
+            .attr("fill", "#0f172a")
+            .style("pointer-events", "none")
+            .style("opacity", 0)
+            .call((e) => e.transition().duration(300).style("opacity", 1)),
+        (update) => update,
+        (exit) =>
+          exit.call((e) =>
+            e.transition().duration(300).style("opacity", 0).remove()
+          )
+      );
+
+    container
+      .select(".links-group")
+      .selectAll<SVGLineElement, GraphLink>("line")
+      .data(newLinksData, (d) => getEdgeKey(getId(d.source), getId(d.target)))
+      .join(
+        (enter) =>
+          enter
+            .append("line")
+            .attr("stroke", "#e2e8f0")
+            .attr("stroke-width", 2)
+            .style("opacity", 0)
+            .call((e) => e.transition().duration(300).style("opacity", 0.8)),
+        (update) => update,
+        (exit) =>
+          exit.call((e) =>
+            e.transition().duration(300).style("opacity", 0).remove()
+          )
+      );
 
     // Add Edge Labels for weighted edges
-    const edgeLabels = container
-      .append("g")
-      .attr("class", "edge-labels-group")
-      .selectAll("text")
-      .data(links.filter((l) => l.weight !== undefined)) // Only render if weight exists
-      .join("text")
-      .text((d) => d.weight!)
-      .attr("font-size", 11)
-      .attr("font-weight", "500")
-      .attr("fill", "#64748b")
-      .attr("text-anchor", "middle")
-      // Adding a subtle white outline makes it much easier to read over the links
-      .attr("stroke", "#ffffff")
-      .attr("stroke-width", 3)
-      .attr("paint-order", "stroke")
-      .style("pointer-events", "none");
+    container
+      .select(".edge-labels-group")
+      .selectAll<SVGTextElement, GraphLink>("text")
+      .data(
+        newLinksData.filter((l) => l.weight !== undefined),
+        (d) => getEdgeKey(getId(d.source), getId(d.target))
+      )
+      .join(
+        (enter) =>
+          enter
+            .append("text")
+            .text((d) => d.weight!)
+            .attr("font-size", 11)
+            .attr("font-weight", "500")
+            .attr("fill", "#64748b")
+            .attr("text-anchor", "middle")
+            .attr("stroke", "#ffffff")
+            .attr("stroke-width", 3)
+            .attr("paint-order", "stroke")
+            .style("pointer-events", "none")
+            .style("opacity", 0)
+            .call((e) => e.transition().duration(300).style("opacity", 1)),
+        (update) => {
+          // Update the text in case the weight changed on an existing edge
+          update.text((d) => d.weight!);
+          return update;
+        },
+        (exit) =>
+          exit.call((e) =>
+            e.transition().duration(300).style("opacity", 0).remove()
+          )
+      );
 
-    const node = container
-      .append("g")
-      .attr("class", "nodes-group")
-      .selectAll<SVGCircleElement, unknown>("circle")
-      .data(nodes)
-      .join("circle")
-      .attr("r", 12)
-      .attr("fill", "#cbd5e1")
-      .attr("stroke", "#ffffff")
-      .attr("stroke-width", 2)
-      .attr("cursor", "pointer")
-      .call(drag);
+    simulation.nodes(newNodesData);
+    simulation
+      .force<d3.ForceLink<GraphNode, GraphLink>>("link")
+      ?.links(newLinksData);
 
-    const labels = container
-      .append("g")
-      .attr("class", "node-labels-group")
-      .selectAll("text")
-      .data(nodes)
-      .join("text")
-      .text((d) => d.id)
-      .attr("font-size", 12)
-      .attr("font-weight", "600")
-      .attr("dx", 15)
-      .attr("dy", 4)
-      .attr("fill", "#0f172a")
-      .style("pointer-events", "none"); // Prevent labels from intercepting drag events
-
-    simulation.on("tick", () => {
-      link
-        .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
-        .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
-        .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
-        .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
-      node.attr("cx", (d) => d.x ?? 0).attr("cy", (d) => d.y ?? 0);
-      labels.attr("x", (d) => d.x ?? 0).attr("y", (d) => d.y ?? 0);
-
-      // Keep edge labels centered on the link
-      edgeLabels
-        .attr(
-          "x",
-          (d) =>
-            (((d.source as GraphNode).x ?? 0) +
-              ((d.target as GraphNode).x ?? 0)) /
-            2
-        )
-        .attr(
-          "y",
-          (d) =>
-            (((d.source as GraphNode).y ?? 0) +
-              ((d.target as GraphNode).y ?? 0)) /
-              2 -
-            4
-        ); // Lift slightly off dead-center
-    });
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      if (!entries.length) return;
-      const { width, height } = entries[0].contentRect;
-
-      // Ignore phantom resizes when dimensions are 0
-      if (width === 0 || height === 0) return;
-
-      // 1. Update the internal zoom extent so boundaries remain correct
-      zoom.extent([
-        [0, 0],
-        [width, height]
-      ]);
-
-      const svgNode = svg.node();
-      if (svgNode) {
-        const t = d3.zoomTransform(svgNode);
-
-        // Calculate new scale from diagonal ratio
-        const currentDiagonal = Math.hypot(currentWidth, currentHeight);
-        const newDiagonal = Math.hypot(width, height);
-        const scaleRatio = newDiagonal / currentDiagonal;
-
-        // Get scale limits
-        const [minZoom, maxZoom] = zoom.scaleExtent();
-        const newK = Math.max(minZoom, Math.min(maxZoom, t.k * scaleRatio));
-
-        // Find Center
-        const dataCenterX = (currentWidth / 2 - t.x) / t.k;
-        const dataCenterY = (currentHeight / 2 - t.y) / t.k;
-
-        // Calculate translation
-        const newTx = width / 2 - dataCenterX * newK;
-        const newTy = height / 2 - dataCenterY * newK;
-
-        // Apply calculated transform
-        const newTransform = d3.zoomIdentity
-          .translate(newTx, newTy)
-          .scale(newK);
-        svg.call(zoom.transform, newTransform);
-      }
-
-      // 6. Update trackers for the next resize event
-      currentWidth = width;
-      currentHeight = height;
-    });
-
-    // Start observing the wrapper div
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      simulation.stop();
-      resizeObserver.disconnect();
-    };
+    // Only reheat if nodes/links were added or removed
+    if (topologyChanged) {
+      simulation.alpha(0.5).restart();
+    }
   }, [graph]);
 
   // Handles only visual state updates (colors/sizes)
   useEffect(() => {
     if (!svgRef.current) return;
+    const svg = d3.select(svgRef.current);
 
     // Select the nodes we created in the main effect
-    const svg = d3.select(svgRef.current);
-    const nodes = svg
-      .select(".nodes-group")
-      .selectAll<SVGCircleElement, GraphNode>("circle");
-
     // Animate color and size changes based on algorithm state
-    nodes
-      .transition()
+    svg
+      .select(".nodes-group")
+      .selectAll<SVGCircleElement, GraphNode>("circle")
+      .transition("visual")
       .duration(300)
       .attr("fill", (d) => {
         if (d.id === visualState.currentNode) return "#ef4444"; // Red: Evaluating
@@ -292,37 +368,28 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       );
 
     // Transition label positions to prevent overlap when node grows
-    const labels = svg
+    svg
       .select(".node-labels-group")
-      .selectAll<SVGTextElement, GraphNode>("text");
-
-    labels
-      .transition()
+      .selectAll<SVGTextElement, GraphNode>("text")
+      .transition("visual")
       .duration(300)
       .attr("dx", (d) => (d.id === visualState.currentNode ? 22 : 15));
 
     // Update Links
-    const links = svg
+    svg
       .select(".links-group")
-      .selectAll<SVGLineElement, GraphLink>("line");
-    links
-      .transition()
+      .selectAll<SVGLineElement, GraphLink>("line")
+      .transition("visual")
       .duration(300)
       .attr("stroke", (d) => {
-        const sourceId = typeof d.source === "object" ? d.source.id : d.source;
-        const targetId = typeof d.target === "object" ? d.target.id : d.target;
-        const key = getEdgeKey(sourceId, targetId);
-
+        const key = getEdgeKey(getId(d.source), getId(d.target));
         if (key === visualState.evaluatingEdge) return "#f97316"; // Orange: Evaluating
         if (visualState.highlightedEdges.has(key)) return "#22c55e"; // Green: Highlighted
         if (visualState.frontierEdges.has(key)) return "#facc15"; // Yellow: Frontier
         return "#e2e8f0"; // Default
       })
       .attr("stroke-width", (d) => {
-        const sourceId = typeof d.source === "object" ? d.source.id : d.source;
-        const targetId = typeof d.target === "object" ? d.target.id : d.target;
-        const key = getEdgeKey(sourceId, targetId);
-
+        const key = getEdgeKey(getId(d.source), getId(d.target));
         if (
           key === visualState.evaluatingEdge ||
           visualState.highlightedEdges.has(key)
@@ -332,6 +399,67 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       });
   }, [visualState]);
 
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let currentWidth = containerRef.current.clientWidth;
+    let currentHeight = containerRef.current.clientHeight;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries.length || !svgRef.current || !zoomRef.current) return;
+      const { width, height } = entries[0].contentRect;
+
+      // Ignore phantom resizes when dimensions are 0
+      if (width === 0 || height === 0) return;
+
+      const svg = d3.select(svgRef.current);
+
+      // 1Update the internal zoom extent so boundaries remain correct
+      zoomRef.current.extent([
+        [0, 0],
+        [width, height]
+      ]);
+
+      const t = d3.zoomTransform(svgRef.current);
+
+      // Calculate new scale from diagonal ratio
+      const currentDiagonal = Math.hypot(currentWidth, currentHeight);
+      const newDiagonal = Math.hypot(width, height);
+      const scaleRatio = newDiagonal / currentDiagonal;
+
+      // Get scale limits
+      const [minZoom, maxZoom] = zoomRef.current.scaleExtent();
+      const newK = Math.max(minZoom, Math.min(maxZoom, t.k * scaleRatio));
+
+      // Find Center
+      const dataCenterX = (currentWidth / 2 - t.x) / t.k;
+      const dataCenterY = (currentHeight / 2 - t.y) / t.k;
+
+      // Calculate translation
+      const newTx = width / 2 - dataCenterX * newK;
+      const newTy = height / 2 - dataCenterY * newK;
+
+      // Apply calculated transform
+      const newTransform = d3.zoomIdentity.translate(newTx, newTy).scale(newK);
+      svg.call(zoomRef.current.transform, newTransform);
+
+      if (simulationRef.current) {
+        simulationRef.current.force(
+          "center",
+          d3.forceCenter(width / 2, height / 2)
+        );
+        simulationRef.current.alpha(0.1).restart();
+      }
+
+      // 6. Update trackers for the next resize event
+      currentWidth = width;
+      currentHeight = height;
+    });
+
+    // Start observing the wrapper div
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -339,7 +467,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     >
       <svg ref={svgRef} className="w-full h-full"></svg>
       {!graph && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300">
           <p className="text-gray-500 text-lg">
             Upload a graph file to begin visualization
           </p>
