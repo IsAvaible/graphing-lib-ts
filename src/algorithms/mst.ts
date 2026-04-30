@@ -55,7 +55,7 @@ export function* primsAlgorithmGenerator<T extends string | number>(
     }
   };
 
-  // Reorder nodes so startNode is processed first, if provided
+  // Reorder nodes so startNode is processed first, if provided (this will incur a O(n) penality)
   const orderedNodes =
     startNode !== undefined
       ? [startNode, ...nodes.filter((n) => n !== startNode)]
