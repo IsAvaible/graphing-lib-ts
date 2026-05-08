@@ -9,6 +9,7 @@ import {
   INITIAL_VISUAL_STATE,
   getEdgeKey
 } from "@/ui/types.ts";
+import { doubleTreeAlgorithmGenerator } from "@/algorithms/tsp/doubleTreeTsp.ts";
 
 export function* connectedComponentsVisualizer<T>(
   graph: Graph<T>
@@ -110,5 +111,48 @@ export function* kruskalVisualizer<T extends string | number>(
       subGraph,
       subVisualState
     };
+  }
+}
+
+export function* doubleTreeVisualizer<T extends string | number>(
+  graph: Graph<T>
+): Generator<VisualState<T>, void, unknown> {
+  const algorithm = doubleTreeAlgorithmGenerator(graph);
+
+  for (const state of algorithm) {
+    const mstEdges = new Set(
+      state.mstEdges.map((e) => getEdgeKey(e.from, e.to))
+    );
+    const tourEdges = new Set(
+      state.tourEdges.map((e) => getEdgeKey(e.from, e.to))
+    );
+    const evaluatingEdge = state.evaluatingEdge
+      ? getEdgeKey(state.evaluatingEdge.from, state.evaluatingEdge.to)
+      : null;
+
+    if (state.phase === "mst") {
+      // Phase 1: Just show the MST being completed
+      const visitedNodes = new Set<T>();
+      state.mstEdges.forEach((e) => {
+        visitedNodes.add(e.from);
+        visitedNodes.add(e.to);
+      });
+
+      yield {
+        ...INITIAL_VISUAL_STATE,
+        visitedNodes,
+        highlightedEdges: mstEdges
+      };
+    } else {
+      // Phase 2 & 3: Show the MST as background (frontierEdges) and the TSP Tour as highlighted
+      yield {
+        ...INITIAL_VISUAL_STATE,
+        visitedNodes: new Set(state.tourNodes),
+        currentNode: state.evaluatingNode,
+        highlightedEdges: tourEdges,
+        frontierEdges: mstEdges, // Keeps the underlying MST visible
+        evaluatingEdge
+      };
+    }
   }
 }

@@ -3,7 +3,8 @@ import { Graph } from "@/core/Graph.ts";
 import {
   connectedComponentsVisualizer,
   primVisualizer,
-  kruskalVisualizer
+  kruskalVisualizer,
+  doubleTreeVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
@@ -17,8 +18,16 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle
+} from "@/components/ui/alert";
+import { AlertCircle, X } from "lucide-react";
+import { Button } from "@/components/ui/button.tsx";
 
-type AlgorithmOption = "CC" | "PRIM" | "KRUSKAL";
+type AlgorithmOption = "CC" | "PRIM" | "KRUSKAL" | "DOUBLE_TREE";
 
 export const App: React.FC = () => {
   const [graph, setGraph] = useState<Graph<number> | null>(null);
@@ -36,12 +45,14 @@ export const App: React.FC = () => {
         return primVisualizer(graph);
       case "KRUSKAL":
         return kruskalVisualizer(graph);
+      case "DOUBLE_TREE":
+        return doubleTreeVisualizer(graph);
       default:
         return null;
     }
   }, [graph, activeAlgorithm]);
 
-  const { visualState, isPlaying, togglePlay, stepForward, reset } =
+  const { visualState, isPlaying, error, togglePlay, stepForward, reset } =
     useAlgorithmRunner(algorithmFactory, delayMs[0]);
 
   return (
@@ -54,6 +65,31 @@ export const App: React.FC = () => {
         isPlaying={isPlaying}
         hasGraph={graph !== null}
       />
+
+      {/* ERROR BANNER */}
+      {error && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg">
+          <Alert
+            variant="destructive"
+            className="shadow-lg bg-red-50 border-red-200 relative"
+          >
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Algorithm Error</AlertTitle>
+            <AlertDescription className="pr-6">{error}</AlertDescription>
+
+            <AlertAction className="top-0 flex h-full items-center">
+              <Button
+                onClick={reset}
+                variant="destructive"
+                size="icon"
+                aria-label="Dismiss error"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </AlertAction>
+          </Alert>
+        </div>
+      )}
 
       {graph && (
         <div className="absolute top-20 right-4 z-10 bg-white p-4 rounded shadow border border-gray-200 flex flex-col space-y-4">
@@ -74,6 +110,7 @@ export const App: React.FC = () => {
                 <SelectItem value="CC">Connected Components</SelectItem>
                 <SelectItem value="PRIM">Prim's MST</SelectItem>
                 <SelectItem value="KRUSKAL">Kruskal's MST</SelectItem>
+                <SelectItem value="DOUBLE_TREE">Double Tree TSP</SelectItem>
               </SelectContent>
             </Select>
           </div>

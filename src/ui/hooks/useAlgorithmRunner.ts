@@ -10,6 +10,7 @@ export function useAlgorithmRunner<T>(
   const [visualState, setVisualState] =
     useState<VisualState<T>>(INITIAL_VISUAL_STATE);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null); // Added error state
 
   const generatorRef = useRef<Generator<VisualState<T>, any, unknown> | null>(
     null
@@ -24,6 +25,7 @@ export function useAlgorithmRunner<T>(
     }
     setVisualState(INITIAL_VISUAL_STATE);
     setIsPlaying(false);
+    setError(null); // Clear error on reset
   }, [generatorFactory]);
 
   // Re-initialize when the factory changes (e.g., new graph or new algorithm selected)
@@ -34,20 +36,30 @@ export function useAlgorithmRunner<T>(
   const stepForward = useCallback(() => {
     if (!generatorRef.current) return;
 
-    const result = generatorRef.current.next();
+    try {
+      const result = generatorRef.current.next();
 
-    if (result.done) {
+      if (result.done) {
+        setIsPlaying(false);
+        // Clear current/queued nodes when finished
+        setVisualState((prev) => ({
+          ...prev,
+          currentNode: null,
+          queuedNodes: new Set()
+        }));
+        return;
+      }
+
+      setVisualState(result.value);
+    } catch (err: any) {
+      // Stop execution and surface the error message
       setIsPlaying(false);
-      // Optionally clear current/queued nodes when finished
-      setVisualState((prev) => ({
-        ...prev,
-        currentNode: null,
-        queuedNodes: new Set()
-      }));
-      return;
+      setError(
+        err instanceof Error
+          ? err.message
+          : "An unknown error occurred in the algorithm."
+      );
     }
-
-    setVisualState(result.value);
   }, []);
 
   useEffect(() => {
@@ -64,6 +76,7 @@ export function useAlgorithmRunner<T>(
   return {
     visualState,
     isPlaying,
+    error,
     togglePlay: () => setIsPlaying((p) => !p),
     stepForward,
     reset
