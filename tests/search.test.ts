@@ -41,12 +41,14 @@ describe("Graph Algorithms - Search", () => {
     // The algorithm starts at Node 1.
     let result = bfsGenerator.next();
     expect(result.done).toBe(false);
+    if (result.done) throw new Error("Finished early");
     expect(result.value?.currentNode).toBe(1);
     expect(result.value?.visitedNodes.has(1)).toBe(true);
 
     // The algorithm moves to the first neighbor (Node 2)
     result = bfsGenerator.next();
     expect(result.done).toBe(false);
+    if (result.done) throw new Error("Finished early");
     expect(result.value?.currentNode).toBe(2);
     expect(result.value?.visitedNodes.has(2)).toBe(true);
     expect(result.value?.queue).toContain(3);
@@ -54,6 +56,7 @@ describe("Graph Algorithms - Search", () => {
     // The algorithm moves to the second neighbor (Node 3)
     result = bfsGenerator.next();
     expect(result.done).toBe(false);
+    if (result.done) throw new Error("Finished early");
     expect(result.value?.currentNode).toBe(3);
     expect(result.value?.visitedNodes.has(3)).toBe(true);
     expect(result.value?.queue).toHaveLength(0); // Queue is now empty
@@ -62,6 +65,6 @@ describe("Graph Algorithms - Search", () => {
     // The generator should now be exhausted
     result = bfsGenerator.next();
     expect(result.done).toBe(true);
-    expect(result.value).toBeUndefined();
+    expect(result.value).toStrictEqual(new Set([1, 2, 3]));
   });
 });

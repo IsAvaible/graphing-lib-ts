@@ -11,6 +11,16 @@ export interface BFSState<T> {
 }
 
 /**
+ * Represents a snapshot of the Depth-First Search (DFS) algorithm at a specific step.
+ * @template T The id-type of a vertex in the graph.
+ */
+export interface DFSState<T> {
+  currentNode: T;
+  visitedNodes: Set<T>;
+  stack: T[];
+}
+
+/**
  * Represents a snapshot of the Connected Components algorithm.
  * @template T The id-type of a vertex in the graph.
  */
@@ -31,7 +41,7 @@ export function* breadthFirstSearch<T>(
   startNode: T,
   visited: Set<T> = new Set(),
   recordState: boolean = true
-): Generator<BFSState<T>, void, unknown> {
+): Generator<BFSState<T>, Set<T>, unknown> {
   const queue: T[] = [startNode];
   let head = 0;
   visited.add(startNode);
@@ -55,6 +65,50 @@ export function* breadthFirstSearch<T>(
       }
     }
   }
+
+  // Return the final data structure
+  return visited;
+}
+
+/**
+ * A Generator that yields the state of the DFS at each step.
+ * This can be consumed instantly for pure math, or step-by-step for visualization.
+ */
+export function* depthFirstSearch<T>(
+  graph: Graph<T>,
+  startNode: T,
+  visited: Set<T> = new Set(),
+  recordState: boolean = true
+): Generator<DFSState<T>, Set<T>, unknown> {
+  const stack: T[] = [startNode];
+
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+
+    if (!visited.has(current)) {
+      visited.add(current);
+
+      if (recordState) {
+        yield {
+          currentNode: current,
+          visitedNodes: new Set(visited),
+          stack: [...stack]
+        };
+      }
+
+      // Reverse loop to maintain standard left-to-right processing order
+      const neighbors = graph.getNeighbors(current);
+      for (let i = neighbors.length - 1; i >= 0; i--) {
+        const next = neighbors[i].to;
+        if (!visited.has(next)) {
+          stack.push(next);
+        }
+      }
+    }
+  }
+
+  // Return the final data structure
+  return visited;
 }
 
 /**
