@@ -1,21 +1,26 @@
 import type { Edge } from "./types";
 
-export class Graph<T = number> {
-  private adjacencyList: Map<T, Edge<T>[]> = new Map();
-  public readonly isDirected: boolean;
+export class Graph<
+  T = number,
+  IsDirected extends boolean = boolean,
+  E extends Edge<T> = Edge<T>
+> {
+  private adjacencyList: Map<T, E[]> = new Map();
 
-  constructor(isDirected: boolean = false) {
+  public readonly isDirected: IsDirected;
+
+  constructor(isDirected: IsDirected) {
     this.isDirected = isDirected;
   }
 
   /**
    * Utility to construct a Graph from an array of edges.
    */
-  static fromEdges<T = number>(
-    edges: Edge<T>[],
-    isDirected: boolean = false
-  ): Graph<T> {
-    const graph = new Graph<T>(isDirected);
+  static fromEdges<IsDirected extends boolean, E extends Edge<any>>(
+    edges: E[],
+    isDirected: IsDirected
+  ): Graph<E["from"], IsDirected, E> {
+    const graph = new Graph<E["from"], IsDirected, E>(isDirected);
     for (const edge of edges) {
       graph.addEdge(edge);
     }
@@ -31,7 +36,7 @@ export class Graph<T = number> {
   /**
    * Adds an edge to the graph.
    */
-  addEdge(edge: Edge<T>): void {
+  addEdge(edge: E): void {
     // Ensure both nodes exist
     this.addNode(edge.from);
     this.addNode(edge.to);
@@ -41,7 +46,7 @@ export class Graph<T = number> {
 
     // If undirected, automatically add the reverse edge maintaining all properties
     if (!this.isDirected) {
-      const reverseEdge: Edge<T> = { ...edge, from: edge.to, to: edge.from };
+      const reverseEdge: E = { ...edge, from: edge.to, to: edge.from };
       this.adjacencyList.get(edge.to)!.push(reverseEdge);
     }
   }
@@ -49,7 +54,7 @@ export class Graph<T = number> {
   /**
    * Gets the neighbors of a given node.
    */
-  getNeighbors(id: T): Readonly<Edge<T>>[] {
+  getNeighbors(id: T): Readonly<E>[] {
     return this.adjacencyList.get(id) || [];
   }
 
@@ -60,7 +65,7 @@ export class Graph<T = number> {
   /**
    * Retrieves a specific edge between two nodes if it exists.
    */
-  getEdge(from: T, to: T): Readonly<Edge<T>> | undefined {
+  getEdge(from: T, to: T): Readonly<E> | undefined {
     const neighbors = this.adjacencyList.get(from);
     if (!neighbors) return undefined;
 

@@ -116,7 +116,7 @@ export function* depthFirstSearch<T>(
  * including the nested BFS traversal steps.
  */
 export function* countConnectedComponentsGenerator<T>(
-  graph: Graph<T>,
+  graph: Graph<T, false>,
   recordState: boolean = true
 ): Generator<ConnectedComponentsState<T>, number, unknown> {
   const visited = new Set<T>();
@@ -160,7 +160,7 @@ export function* countConnectedComponentsGenerator<T>(
 /**
  * Standard utility wrapper to run the generator instantly and just return the count.
  */
-export function countConnectedComponents<T>(graph: Graph<T>): number {
+export function countConnectedComponents<T>(graph: Graph<T, false>): number {
   const generator = countConnectedComponentsGenerator(graph, false);
   let result = generator.next();
 

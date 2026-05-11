@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readGraphFromFileNode } from "../src/io/node-reader";
 import { primsAlgorithm, kruskalsAlgorithm } from "../src/algorithms/mst";
 import { type WeightedEdge } from "../src/core/types";
+import { parseWeightedGraph } from "../src/io/parser";
 
 describe("Lab Assignment - MST Algorithms Runtime Tests", () => {
   // Runtime Limit = Reference time in seconds * 10 (allowed overhead) * 1000 (convert to ms)
@@ -52,7 +53,9 @@ describe("Lab Assignment - MST Algorithms Runtime Tests", () => {
     "Testing performance & validity on $name",
     ({ name, kruskalMaxMs, primMaxMs, weightSum: expectedWeightSum }) => {
       it(`Kruskal should process ${name} within ${kruskalMaxMs}ms`, async () => {
-        const graph = await readGraphFromFileNode(`./graphs/weighted/${name}`);
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/weighted/${name}`)
+        );
 
         const start = performance.now();
         kruskalsAlgorithm(graph);
@@ -66,7 +69,9 @@ describe("Lab Assignment - MST Algorithms Runtime Tests", () => {
       });
 
       it(`Kruskal should find the correct MST weight sum for ${name}`, async () => {
-        const graph = await readGraphFromFileNode(`./graphs/weighted/${name}`);
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/weighted/${name}`)
+        );
 
         const mstEdges = kruskalsAlgorithm(graph);
         const weightSum = getWeightSum(mstEdges);
@@ -78,7 +83,9 @@ describe("Lab Assignment - MST Algorithms Runtime Tests", () => {
       });
 
       it(`Prim should process ${name} within ${primMaxMs}ms`, async () => {
-        const graph = await readGraphFromFileNode(`./graphs/weighted/${name}`);
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/weighted/${name}`)
+        );
 
         const start = performance.now();
         primsAlgorithm(graph);
@@ -92,7 +99,9 @@ describe("Lab Assignment - MST Algorithms Runtime Tests", () => {
       });
 
       it(`Prim should find the correct MST weight sum for ${name}`, async () => {
-        const graph = await readGraphFromFileNode(`./graphs/weighted/${name}`);
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/weighted/${name}`)
+        );
 
         const mstEdges = primsAlgorithm(graph);
         const weightSum = getWeightSum(mstEdges);

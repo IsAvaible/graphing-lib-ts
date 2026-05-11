@@ -1,6 +1,3 @@
-import { Graph } from "../core/Graph";
-import { parseGraphFromLines } from "./parser";
-
 /**
  * Helper: Async generator to yield lines from a browser File or Blob.
  * Prevents loading massive files into RAM all at once.
@@ -36,9 +33,7 @@ async function* makeLineIterator(file: File | Blob): AsyncGenerator<string> {
  * Browser: Reads and parses a graph from a File object (e.g., from an <input type="file">).
  */
 export async function readGraphFromFileBrowser(
-  file: File | Blob,
-  isDirected: boolean = false
-): Promise<Graph<number>> {
-  const lineIterator = makeLineIterator(file);
-  return parseGraphFromLines(lineIterator, isDirected);
+  file: File | Blob
+): Promise<AsyncGenerator<string>> {
+  return makeLineIterator(file);
 }

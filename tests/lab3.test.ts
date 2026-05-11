@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readGraphFromFileNode } from "../src/io/node-reader";
 import { type WeightedEdge } from "../src/core/types";
 import { doubleTreeAlgorithm } from "../src/algorithms/tsp/doubleTreeTsp";
+import { parseWeightedGraph } from "../src/io/parser";
 
 describe("Lab Assignment - Double Tree TSP Algorithm Runtime Tests", () => {
   // Runtime Limit = Reference time in seconds * 10 (allowed overhead) * 1000 (convert to ms)
@@ -37,7 +38,9 @@ describe("Lab Assignment - Double Tree TSP Algorithm Runtime Tests", () => {
     ({ name, maxMs, expectedWeightSum }) => {
       it(`Double Tree should process ${name} within ${maxMs}ms`, async () => {
         // Adjust the directory path if your complete graphs are stored elsewhere
-        const graph = await readGraphFromFileNode(`./graphs/metric/${name}`);
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/metric/${name}`)
+        );
 
         const start = performance.now();
         doubleTreeAlgorithm(graph);
@@ -52,7 +55,9 @@ describe("Lab Assignment - Double Tree TSP Algorithm Runtime Tests", () => {
       });
 
       it(`Double Tree should find the correct TSP tour weight sum for ${name}`, async () => {
-        const graph = await readGraphFromFileNode(`./graphs/metric/${name}`);
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/metric/${name}`)
+        );
 
         const tourEdges = doubleTreeAlgorithm(graph);
         const weightSum = getWeightSum(tourEdges);

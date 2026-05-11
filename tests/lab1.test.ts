@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { readGraphFromFileNode } from "../src/io/node-reader";
 import { countConnectedComponents } from "../src/algorithms/search";
+import { parseUnweightedGraph } from "../src/io/parser";
 
 describe("Lab Assignment 1 - Test Suite", () => {
   it("should compute 2 connected components for Graph1", async () => {
-    const graph1 = await readGraphFromFileNode("./graphs/simple/Graph1.txt");
+    const graph1 = await parseUnweightedGraph(
+      readGraphFromFileNode("./graphs/simple/Graph1.txt")
+    );
 
     const result = countConnectedComponents(graph1);
 
@@ -12,7 +15,9 @@ describe("Lab Assignment 1 - Test Suite", () => {
   });
 
   it("should compute 4 connected components for Graph2", async () => {
-    const graph2 = await readGraphFromFileNode("./graphs/simple/Graph2.txt");
+    const graph2 = await parseUnweightedGraph(
+      readGraphFromFileNode("./graphs/simple/Graph2.txt")
+    );
 
     const result = countConnectedComponents(graph2);
 
@@ -20,7 +25,9 @@ describe("Lab Assignment 1 - Test Suite", () => {
   });
 
   it("should compute 4 connected components for Graph2", async () => {
-    const graph3 = await readGraphFromFileNode("./graphs/simple/Graph3.txt");
+    const graph3 = await parseUnweightedGraph(
+      readGraphFromFileNode("./graphs/simple/Graph3.txt")
+    );
 
     const result = countConnectedComponents(graph3);
 
@@ -28,8 +35,8 @@ describe("Lab Assignment 1 - Test Suite", () => {
   });
 
   it("should compute 222 connected components for Graph_gross", async () => {
-    const graphGross = await readGraphFromFileNode(
-      "./graphs/simple/Graph_gross.txt"
+    const graphGross = await parseUnweightedGraph(
+      readGraphFromFileNode("./graphs/simple/Graph_gross.txt")
     );
 
     const result = countConnectedComponents(graphGross);
@@ -38,8 +45,8 @@ describe("Lab Assignment 1 - Test Suite", () => {
   });
 
   it("should compute 9560 connected components for Graph_ganzgross", async () => {
-    const graphGanzgross = await readGraphFromFileNode(
-      "./graphs/simple/Graph_ganzgross.txt"
+    const graphGanzgross = await parseUnweightedGraph(
+      readGraphFromFileNode("./graphs/simple/Graph_ganzgross.txt")
     );
 
     const result = countConnectedComponents(graphGanzgross);
@@ -48,8 +55,8 @@ describe("Lab Assignment 1 - Test Suite", () => {
   });
 
   it("should compute 306 connected components for Graph_ganzganzgross", async () => {
-    const graphGanzganzgross = await readGraphFromFileNode(
-      "./graphs/simple/Graph_ganzganzgross.txt"
+    const graphGanzganzgross = await parseUnweightedGraph(
+      readGraphFromFileNode("./graphs/simple/Graph_ganzganzgross.txt")
     );
 
     const result = countConnectedComponents(graphGanzganzgross);

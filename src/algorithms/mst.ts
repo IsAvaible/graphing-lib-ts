@@ -35,7 +35,7 @@ export interface KruskalState<T extends string | number> {
  * Now supports disconnected graphs (forests) and utilizes a Min-Priority Queue.
  */
 export function* primsAlgorithmGenerator<T extends string | number>(
-  graph: Graph<T>,
+  graph: Graph<T, false, WeightedEdge<T>>,
   startNode?: T,
   recordState: boolean = true
 ): Generator<PrimState<T>, WeightedEdge<T>[], unknown> {
@@ -100,7 +100,7 @@ export function* primsAlgorithmGenerator<T extends string | number>(
  * A Generator that yields the state of Kruskal's Algorithm at each step.
  */
 export function* kruskalsAlgorithmGenerator<T extends string | number>(
-  graph: Graph<T>,
+  graph: Graph<T, false, WeightedEdge<T>>,
   recordState: boolean = true,
   recordSubState: boolean = true
 ): Generator<KruskalState<T>, WeightedEdge<T>[], unknown> {
@@ -184,7 +184,7 @@ export function* kruskalsAlgorithmGenerator<T extends string | number>(
  * Standard utility wrapper to run Prim's generator instantly.
  */
 export function primsAlgorithm<T extends string | number>(
-  graph: Graph<T>,
+  graph: Graph<T, false, WeightedEdge<T>>,
   startNode?: T
 ): WeightedEdge<T>[] {
   const generator = primsAlgorithmGenerator(graph, startNode, false);
@@ -201,7 +201,7 @@ export function primsAlgorithm<T extends string | number>(
  * Standard utility wrapper to run Kruskal's generator instantly.
  */
 export function kruskalsAlgorithm<T extends string | number>(
-  graph: Graph<T>
+  graph: Graph<T, false, WeightedEdge<T>>
 ): WeightedEdge<T>[] {
   const generator = kruskalsAlgorithmGenerator(graph, false, false);
   let result = generator.next();

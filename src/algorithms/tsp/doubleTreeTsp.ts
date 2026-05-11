@@ -22,7 +22,7 @@ export interface DoubleTreeState<T extends string | number> {
  * the triangle inequality (Metric TSP).
  */
 export function* doubleTreeAlgorithmGenerator<T extends string | number>(
-  graph: Graph<T>,
+  graph: Graph<T, false, WeightedEdge<T>>,
   recordState: boolean = true
 ): Generator<DoubleTreeState<T>, WeightedEdge<T>[], unknown> {
   const nodes = graph.getNodes();
@@ -123,7 +123,7 @@ export function* doubleTreeAlgorithmGenerator<T extends string | number>(
  * Standard utility wrapper to run the Double Tree algorithm instantly.
  */
 export function doubleTreeAlgorithm<T extends string | number>(
-  graph: Graph<T>
+  graph: Graph<T, false, WeightedEdge<T>>
 ): WeightedEdge<T>[] {
   const generator = doubleTreeAlgorithmGenerator(graph, false);
   const result = generator.next();

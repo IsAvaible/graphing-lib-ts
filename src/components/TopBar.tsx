@@ -1,6 +1,7 @@
 import React, { type ChangeEvent } from "react";
-import { Graph } from "../core/Graph";
-import { readGraphFromFileBrowser } from "../io/browser-reader.ts";
+import { Graph } from "@/core/Graph";
+import { readGraphFromFileBrowser } from "@/io/browser-reader.ts";
+import { parseMixedGraph } from "@/io/parser.ts";
 import { Button } from "@/components/ui/button.tsx";
 import {
   UploadIcon,
@@ -31,7 +32,10 @@ export const TopBar: React.FC<TopBarProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const graph = await readGraphFromFileBrowser(file, false);
+    const graph = await parseMixedGraph(
+      await readGraphFromFileBrowser(file),
+      false
+    );
     onGraphLoaded(graph);
   };
 

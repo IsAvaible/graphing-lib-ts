@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { readGraphFromFileNode } from "../src/io/node-reader";
+import { parseUnweightedGraph, parseWeightedGraph } from "../src/io/parser";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,7 +28,9 @@ describe("Graph File Parser", () => {
   });
 
   it("should correctly parse an unweighted graph and initialize all nodes", async () => {
-    const graph = await readGraphFromFileNode(unweightedFilePath, false);
+    const graph = await parseUnweightedGraph(
+      readGraphFromFileNode(unweightedFilePath)
+    );
 
     // Even though only nodes 0, 1, 4, 6, 9, 13 are in the edges,
     // the graph should have exactly 15 nodes (0 through 14).
@@ -40,7 +43,10 @@ describe("Graph File Parser", () => {
   });
 
   it("should correctly parse a weighted graph", async () => {
-    const graph = await readGraphFromFileNode(weightedFilePath, true); // Treating as directed for test
+    const graph = await parseWeightedGraph(
+      readGraphFromFileNode(weightedFilePath),
+      true
+    ); // Treating as directed for test
 
     expect(graph.getNodes()).toHaveLength(1000);
 
