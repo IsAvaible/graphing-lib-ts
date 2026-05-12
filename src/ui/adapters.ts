@@ -10,6 +10,7 @@ import {
   getEdgeKey
 } from "@/ui/types.ts";
 import { doubleTreeAlgorithmGenerator } from "@/algorithms/tsp/doubleTreeTsp.ts";
+import { nearestNeighborTspGenerator } from "@/algorithms/tsp/nearestNeighborTsp.ts";
 
 export function* connectedComponentsVisualizer<T>(
   graph: Graph<T>
@@ -154,5 +155,28 @@ export function* doubleTreeVisualizer<T extends string | number>(
         evaluatingEdge
       };
     }
+  }
+}
+
+export function* nearestNeighborVisualizer<T extends string | number>(
+  graph: Graph<T>
+): Generator<VisualState<T>, void, unknown> {
+  const algorithm = nearestNeighborTspGenerator(graph);
+
+  for (const state of algorithm) {
+    const tourEdges = new Set(
+      state.tourEdges.map((e) => getEdgeKey(e.from, e.to))
+    );
+    const evaluatingEdge = state.evaluatingEdge
+      ? getEdgeKey(state.evaluatingEdge.from, state.evaluatingEdge.to)
+      : null;
+
+    yield {
+      ...INITIAL_VISUAL_STATE,
+      visitedNodes: new Set(state.tourNodes),
+      currentNode: state.evaluatingNode,
+      highlightedEdges: tourEdges,
+      evaluatingEdge
+    };
   }
 }

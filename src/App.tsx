@@ -4,7 +4,8 @@ import {
   connectedComponentsVisualizer,
   primVisualizer,
   kruskalVisualizer,
-  doubleTreeVisualizer
+  doubleTreeVisualizer,
+  nearestNeighborVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
@@ -27,7 +28,12 @@ import {
 import { AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 
-type AlgorithmOption = "CC" | "PRIM" | "KRUSKAL" | "DOUBLE_TREE";
+type AlgorithmOption =
+  | "CC"
+  | "PRIM"
+  | "KRUSKAL"
+  | "DOUBLE_TREE"
+  | "NEAREST_NEIGHBOR";
 
 export const App: React.FC = () => {
   const [graph, setGraph] = useState<Graph<number> | null>(null);
@@ -47,6 +53,8 @@ export const App: React.FC = () => {
         return kruskalVisualizer(graph);
       case "DOUBLE_TREE":
         return doubleTreeVisualizer(graph);
+      case "NEAREST_NEIGHBOR":
+        return nearestNeighborVisualizer(graph);
       default:
         return null;
     }
@@ -111,6 +119,9 @@ export const App: React.FC = () => {
                 <SelectItem value="PRIM">Prim's MST</SelectItem>
                 <SelectItem value="KRUSKAL">Kruskal's MST</SelectItem>
                 <SelectItem value="DOUBLE_TREE">Double Tree TSP</SelectItem>
+                <SelectItem value="NEAREST_NEIGHBOR">
+                  Nearest Neighbor TSP
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
