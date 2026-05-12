@@ -25,7 +25,7 @@ export function* doubleTreeAlgorithmGenerator<T extends string | number>(
   recordState: boolean = true
 ): Generator<DoubleTreeState<T>, WeightedEdge<T>[], unknown> {
   const nodes = graph.getNodes();
-  if (!nodes.length) return [];
+  if (nodes.length <= 1) return [];
 
   // Step 1: Compute the Minimum Spanning Tree
   const mstEdges = kruskalsAlgorithm(graph);
@@ -66,30 +66,35 @@ export function* doubleTreeAlgorithmGenerator<T extends string | number>(
     visited,
     recordState
   );
-  let step = dfsGenerator.next();
 
-  // Handle the yielded intermediate states
-  while (!step.done) {
-    const current = step.value.currentNode;
+  // Helper to handle tour edge appending
+  const processNode = (current: T) => {
     let newTourEdge: WeightedEdge<T> | null = null;
-
     if (tourNodes.length > 0) {
       const prev = tourNodes[tourNodes.length - 1];
       newTourEdge = getRequiredEdge(prev, current);
       tourEdges.push(newTourEdge);
     }
-
     tourNodes.push(current);
-    yield getState("dfs", current, newTourEdge);
+    return newTourEdge;
+  };
 
-    step = dfsGenerator.next();
-  }
+  let step = dfsGenerator.next();
+  if (recordState) {
+    while (!step.done) {
+      const current = step.value.currentNode;
+      const newTourEdge = processNode(current);
+      yield getState("dfs", current, newTourEdge);
+      step = dfsGenerator.next();
+    }
+  } else {
+    if (!step.done) {
+      throw Error("DFS generator yielded when recordState was false.");
+    }
 
-  // If recordState was false, build the tour from the returned DFS visited set
-  if (!recordState) {
-    tourNodes.push(...step.value);
-    for (let i = 1; i < tourNodes.length; i++) {
-      tourEdges.push(getRequiredEdge(tourNodes[i - 1], tourNodes[i]));
+    const finalVisitedNodes = step.value;
+    for (const current of finalVisitedNodes) {
+      processNode(current);
     }
   }
 
