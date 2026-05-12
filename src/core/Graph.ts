@@ -71,4 +71,11 @@ export class Graph<
 
     return neighbors.find((e) => e.to === to);
   }
+
+  /**
+   * Checks if a node exists in the graph.
+   */
+  hasNode(id: T): boolean {
+    return this.adjacencyList.has(id);
+  }
 }
