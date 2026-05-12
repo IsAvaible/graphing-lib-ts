@@ -10,46 +10,49 @@ import { depthFirstSearch } from "@/algorithms/search.ts";
 export interface DoubleTreeState<T extends string | number> {
   phase: "mst" | "dfs" | "complete";
   mstEdges: WeightedEdge<T>[];
-  tourNodes: T[]; // Nodes visited so far in the TSP tour
-  tourEdges: WeightedEdge<T>[]; // Edges forming the TSP tour
+  tourNodes: T[];
+  tourEdges: WeightedEdge<T>[];
   evaluatingNode: T | null;
   evaluatingEdge: WeightedEdge<T> | null;
 }
 
 /**
  * A Generator that yields the state of the Double Tree Algorithm.
- * Note: This algorithm assumes the input graph is a COMPLETE graph satisfying
- * the triangle inequality (Metric TSP).
+ * Only works on metric graphs.
  */
 export function* doubleTreeAlgorithmGenerator<T extends string | number>(
   graph: Graph<T, false, WeightedEdge<T>>,
   recordState: boolean = true
 ): Generator<DoubleTreeState<T>, WeightedEdge<T>[], unknown> {
   const nodes = graph.getNodes();
-  if (nodes.length === 0) return [];
+  if (!nodes.length) return [];
 
   // Step 1: Compute the Minimum Spanning Tree
   const mstEdges = kruskalsAlgorithm(graph);
-
-  if (recordState) {
-    yield {
-      phase: "mst",
-      mstEdges: [...mstEdges],
-      tourNodes: [],
-      tourEdges: [],
-      evaluatingNode: null,
-      evaluatingEdge: null
-    };
-  }
-
-  const mstGraph = Graph.fromEdges(mstEdges, false);
-
   const tourNodes: T[] = [];
   const tourEdges: WeightedEdge<T>[] = [];
+
+  // Helper closure for state yielding
+  const getState = (
+    phase: "mst" | "dfs" | "complete",
+    evaluatingNode: T | null = null,
+    evaluatingEdge: WeightedEdge<T> | null = null
+  ): DoubleTreeState<T> => ({
+    phase,
+    mstEdges: [...mstEdges],
+    tourNodes: [...tourNodes],
+    tourEdges: [...tourEdges],
+    evaluatingNode,
+    evaluatingEdge
+  });
+
+  if (recordState) yield getState("mst");
+
+  const mstGraph = Graph.fromEdges(mstEdges, false);
   const visited = new Set<T>();
 
   const getRequiredEdge = (from: T, to: T): WeightedEdge<T> => {
-    const edge = graph.getEdge(from, to) as WeightedEdge<T> | undefined;
+    const edge = graph.getEdge(from, to);
     if (!edge) {
       throw new Error(`Missing edge ${from}->${to}. Graph must be complete.`);
     }
@@ -77,22 +80,14 @@ export function* doubleTreeAlgorithmGenerator<T extends string | number>(
     }
 
     tourNodes.push(current);
-
-    yield {
-      phase: "dfs",
-      mstEdges: [...mstEdges],
-      tourNodes: [...tourNodes],
-      tourEdges: [...tourEdges],
-      evaluatingNode: current,
-      evaluatingEdge: newTourEdge
-    };
+    yield getState("dfs", current, newTourEdge);
 
     step = dfsGenerator.next();
   }
 
   // If recordState was false, build the tour from the returned DFS visited set
   if (!recordState) {
-    tourNodes.push(...step.value); // Set iteration preserves insertion order
+    tourNodes.push(...step.value);
     for (let i = 1; i < tourNodes.length; i++) {
       tourEdges.push(getRequiredEdge(tourNodes[i - 1], tourNodes[i]));
     }
@@ -105,16 +100,7 @@ export function* doubleTreeAlgorithmGenerator<T extends string | number>(
     tourEdges.push(getRequiredEdge(lastNode, firstNode));
   }
 
-  if (recordState) {
-    yield {
-      phase: "complete",
-      mstEdges: [...mstEdges],
-      tourNodes: [...tourNodes],
-      tourEdges: [...tourEdges],
-      evaluatingNode: null,
-      evaluatingEdge: null
-    };
-  }
+  if (recordState) yield getState("complete");
 
   return tourEdges;
 }
