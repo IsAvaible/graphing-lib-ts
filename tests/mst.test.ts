@@ -7,6 +7,7 @@ import {
   kruskalsAlgorithmGenerator
 } from "../src/algorithms/mst";
 import type { WeightedEdge } from "../src/core/types";
+import { getNextState } from "./utils/getNextState";
 
 // Helper function to quickly create weighted edges for testing
 function wEdge(from: number, to: number, weight: number): WeightedEdge<number> {
@@ -19,7 +20,7 @@ describe("Graph Algorithms - Minimum Spanning Tree (MST)", () => {
   // Node 2 to 3 (Weight 2)
   // Node 1 to 3 (Weight 3) - This should be ignored to form the MST
   const buildTestGraph = () => {
-    const graph = new Graph<number>(false); // Undirected graph
+    const graph = new Graph<number, false, WeightedEdge<number>>(false); // Undirected graph
 
     graph.addEdge(wEdge(1, 2, 1));
     graph.addEdge(wEdge(2, 3, 2));
@@ -62,54 +63,36 @@ describe("Graph Algorithms - Minimum Spanning Tree (MST)", () => {
       // --- STEP 1 ---
       // Start at Node 1. Edges available: 1-2 (wt 1) and 1-3 (wt 3).
       // Minimum is 1-2.
-      let result = primGenerator.next();
-      expect(result.done).toBe(false);
-      if (result.done) {
-        throw new Error(
-          "Expected generator to yield a state, but it finished early."
-        );
-      }
-      expect(result.value?.evaluatingEdge?.weight).toBe(1);
-      expect(result.value?.evaluatingEdge?.to).toBe(2);
-      expect(result.value?.visitedNodes.has(1)).toBe(true);
-      expect(result.value?.visitedNodes.has(2)).toBe(false); // 2 hasn't been added to the set *yet* in the yield state
-      expect(result.value?.mstEdges).toHaveLength(0); // Before pushing
+      let state = getNextState(primGenerator);
+      expect(state.evaluatingEdge?.weight).toBe(1);
+      expect(state.evaluatingEdge?.to).toBe(2);
+      expect(state.visitedNodes.has(1)).toBe(true);
+      expect(state.visitedNodes.has(2)).toBe(false); // 2 hasn't been added to the set *yet* in the yield state
+      expect(state.mstEdges).toHaveLength(0); // Before pushing
 
       // --- STEP 2 ---
       // Node 2 is visited. Adds edge 2-3 (wt 2).
       // Available in PQ: 1-3 (wt 3), 2-3 (wt 2).
       // Minimum is 2-3.
-      result = primGenerator.next();
-      expect(result.done).toBe(false);
-      if (result.done) {
-        throw new Error(
-          "Expected generator to yield a state, but it finished early."
-        );
-      }
-      expect(result.value?.evaluatingEdge?.weight).toBe(2);
-      expect(result.value?.evaluatingEdge?.to).toBe(3);
-      expect(result.value?.visitedNodes.has(2)).toBe(true);
-      expect(result.value?.mstEdges).toHaveLength(1);
+      state = getNextState(primGenerator);
+      expect(state.evaluatingEdge?.weight).toBe(2);
+      expect(state.evaluatingEdge?.to).toBe(3);
+      expect(state.visitedNodes.has(2)).toBe(true);
+      expect(state.mstEdges).toHaveLength(1);
 
       // --- STEP 3 ---
       // Node 3 is visited. Adds no new valid edges.
       // Next in PQ is 1-3 (wt 3).
-      result = primGenerator.next();
-      expect(result.done).toBe(false);
-      if (result.done) {
-        throw new Error(
-          "Expected generator to yield a state, but it finished early."
-        );
-      }
-      expect(result.value?.evaluatingEdge?.weight).toBe(3);
+      state = getNextState(primGenerator);
+      expect(state.evaluatingEdge?.weight).toBe(3);
       // The generator will evaluate it, but in the next cycle see it points to visited Node 3 and skip adding it to MST.
 
       // --- FINISHED ---
-      result = primGenerator.next();
+      const result = primGenerator.next();
       expect(result.done).toBe(true);
 
       // The return value is the final array of edges
-      const finalEdges = result.value as WeightedEdge<number>[];
+      const finalEdges = result.value;
       expect(finalEdges).toHaveLength(2);
     });
 
@@ -119,53 +102,29 @@ describe("Graph Algorithms - Minimum Spanning Tree (MST)", () => {
 
       // --- STEP 1 ---
       // Globally sorted edges. Smallest is 1-2 (wt 1).
-      let result = kruskalGenerator.next();
-      expect(result.done).toBe(false);
-      if (result.done) {
-        throw new Error(
-          "Expected generator to yield a state, but it finished early."
-        );
-      }
-      expect(result.value?.evaluatingEdge?.weight).toBe(1);
-      expect(result.value?.edgesProcessed).toBe(1);
-      expect(result.value?.mstEdges).toHaveLength(0);
+      let state = getNextState(kruskalGenerator);
+      expect(state.evaluatingEdge?.weight).toBe(1);
+      expect(state.edgesProcessed).toBe(1);
+      expect(state.mstEdges).toHaveLength(0);
 
       // --- STEP 2 ---
       // Next smallest is 2-3 (wt 2).
-      result = kruskalGenerator.next();
-      expect(result.done).toBe(false);
-      if (result.done) {
-        throw new Error(
-          "Expected generator to yield a state, but it finished early."
-        );
-      }
-      expect(result.value?.evaluatingEdge?.weight).toBe(2);
-      expect(result.value?.edgesProcessed).toBe(2);
-      expect(result.value?.mstEdges).toHaveLength(1);
+      state = getNextState(kruskalGenerator);
+      expect(state.evaluatingEdge?.weight).toBe(2);
+      expect(state.edgesProcessed).toBe(2);
+      expect(state.mstEdges).toHaveLength(1);
 
       // --- STEP 3 ---
       // Next smallest is 1-3 (wt 3).
       // The algorithm will yield this state before realizing it creates a cycle.
-      result = kruskalGenerator.next();
-      expect(result.done).toBe(false);
-      if (result.done) {
-        throw new Error(
-          "Expected generator to yield a state, but it finished early."
-        );
-      }
-      expect(result.value?.evaluatingEdge?.weight).toBe(3);
-      expect(result.value?.edgesProcessed).toBe(3);
-      expect(result.value?.mstEdges).toHaveLength(2); // Edge 2-3 was added
+      state = getNextState(kruskalGenerator);
+      expect(state.evaluatingEdge?.weight).toBe(3);
+      expect(state.edgesProcessed).toBe(3);
+      expect(state.mstEdges).toHaveLength(2); // Edge 2-3 was added
 
       // --- FINISHED ---
-      result = kruskalGenerator.next();
+      const result = kruskalGenerator.next();
       expect(result.done).toBe(true);
-
-      if (!result.done) {
-        throw new Error(
-          "Expected generator to finish, but it yielded instead."
-        );
-      }
 
       // The return value is the final array of edges, which should only be 2 because 1-3 formed a cycle
       const finalEdges = result.value;
