@@ -5,7 +5,8 @@ import {
   primVisualizer,
   kruskalVisualizer,
   doubleTreeVisualizer,
-  nearestNeighborVisualizer
+  nearestNeighborVisualizer,
+  bruteForceVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
@@ -33,7 +34,8 @@ type AlgorithmOption =
   | "PRIM"
   | "KRUSKAL"
   | "DOUBLE_TREE"
-  | "NEAREST_NEIGHBOR";
+  | "NEAREST_NEIGHBOR"
+  | "BRUTE_FORCE";
 
 export const App: React.FC = () => {
   const [graph, setGraph] = useState<Graph<number> | null>(null);
@@ -55,6 +57,8 @@ export const App: React.FC = () => {
         return doubleTreeVisualizer(graph);
       case "NEAREST_NEIGHBOR":
         return nearestNeighborVisualizer(graph);
+      case "BRUTE_FORCE":
+        return bruteForceVisualizer(graph);
       default:
         return null;
     }
@@ -122,6 +126,7 @@ export const App: React.FC = () => {
                 <SelectItem value="NEAREST_NEIGHBOR">
                   Nearest Neighbor TSP
                 </SelectItem>
+                <SelectItem value="BRUTE_FORCE">Brute-Force TSP</SelectItem>
               </SelectContent>
             </Select>
           </div>
