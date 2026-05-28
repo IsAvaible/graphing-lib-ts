@@ -6,7 +6,8 @@ import {
   kruskalVisualizer,
   doubleTreeVisualizer,
   nearestNeighborVisualizer,
-  bruteForceVisualizer
+  bruteForceVisualizer,
+  branchAndBoundVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
@@ -35,7 +36,8 @@ type AlgorithmOption =
   | "KRUSKAL"
   | "DOUBLE_TREE"
   | "NEAREST_NEIGHBOR"
-  | "BRUTE_FORCE";
+  | "BRUTE_FORCE"
+  | "BRANCH_AND_BOUND";
 
 export const App: React.FC = () => {
   const [graph, setGraph] = useState<Graph<number> | null>(null);
@@ -59,6 +61,8 @@ export const App: React.FC = () => {
         return nearestNeighborVisualizer(graph);
       case "BRUTE_FORCE":
         return bruteForceVisualizer(graph);
+      case "BRANCH_AND_BOUND":
+        return branchAndBoundVisualizer(graph);
       default:
         return null;
     }
@@ -127,6 +131,9 @@ export const App: React.FC = () => {
                   Nearest Neighbor TSP
                 </SelectItem>
                 <SelectItem value="BRUTE_FORCE">Brute-Force TSP</SelectItem>
+                <SelectItem value="BRANCH_AND_BOUND">
+                  Branch & Bound TSP
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -12,6 +12,7 @@ import {
 import { doubleTreeAlgorithmGenerator } from "@/algorithms/tsp/doubleTreeTsp.ts";
 import { nearestNeighborTspGenerator } from "@/algorithms/tsp/nearestNeighborTsp.ts";
 import { bruteForceTspGenerator } from "@/algorithms/tsp/bruteForceTsp.ts";
+import { branchAndBoundTspGenerator } from "@/algorithms/tsp/branchAndBoundTsp.ts";
 
 export function* connectedComponentsVisualizer<T>(
   graph: Graph<T>
@@ -216,6 +217,45 @@ export function* bruteForceVisualizer<T extends string | number>(
         currentNode,
         highlightedEdges: currentTourEdges,
         frontierEdges: bestTourEdges // Ghosts the current optimal tour in the background
+      };
+    }
+  }
+}
+
+export function* branchAndBoundVisualizer<T extends string | number>(
+  graph: Graph<T>
+): Generator<VisualState<T>, void, unknown> {
+  const algorithm = branchAndBoundTspGenerator(graph);
+
+  for (const state of algorithm) {
+    if (state.phase === "complete") {
+      const bestTourEdges = new Set(
+        (state.bestTourEdges || []).map((e) => getEdgeKey(e.from, e.to))
+      );
+
+      yield {
+        ...INITIAL_VISUAL_STATE,
+        visitedNodes: new Set(state.bestTourNodes || []),
+        highlightedEdges: bestTourEdges
+      };
+    } else {
+      const currentTourEdges = new Set(
+        state.currentTourEdges.map((e) => getEdgeKey(e.from, e.to))
+      );
+      const bestTourEdges = new Set(
+        (state.bestTourEdges || []).map((e) => getEdgeKey(e.from, e.to))
+      );
+      const currentNode =
+        state.currentTourNodes.length > 0
+          ? state.currentTourNodes[state.currentTourNodes.length - 1]
+          : null;
+
+      yield {
+        ...INITIAL_VISUAL_STATE,
+        visitedNodes: new Set(state.currentTourNodes),
+        currentNode,
+        highlightedEdges: currentTourEdges,
+        frontierEdges: bestTourEdges // Best optimal path ghosted in the background
       };
     }
   }
