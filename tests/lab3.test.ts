@@ -4,6 +4,8 @@ import { type WeightedEdge } from "../src/core/types";
 import { doubleTreeAlgorithm } from "../src/algorithms/tsp/doubleTreeTsp";
 import { nearestNeighborTsp } from "../src/algorithms/tsp/nearestNeighborTsp"; // Added Nearest Neighbor import
 import { parseWeightedGraph } from "../src/io/parser";
+import { bruteForceTsp } from "../src/algorithms/tsp/bruteForceTsp";
+import { branchAndBoundTsp } from "../src/algorithms/tsp/branchAndBoundTsp";
 
 describe("Lab Assignment - TSP Algorithms Runtime & Validity Tests", () => {
   // Runtime Limit = Reference time in seconds * 10 (allowed overhead) * 1000 (convert to ms)
@@ -113,6 +115,38 @@ describe("Lab Assignment - TSP Algorithms Runtime & Validity Tests", () => {
         expect(weightSum).toBeGreaterThanOrEqual(optimalWeightSum - 0.001);
         expect(weightSum).toBeLessThanOrEqual(upperBound + 0.001);
       });
+
+      it(`Brute-Force should find the exact optimal TSP tour weight sum for ${name}`, async () => {
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/metric/${name}`)
+        );
+
+        const tourEdges = bruteForceTsp(graph);
+        const weightSum = getWeightSum(tourEdges);
+
+        console.log(
+          `[Brute-Force] ${name} Tour weight sum: ${weightSum.toFixed(2)} (Exact Optimal: ${optimalWeightSum})`
+        );
+
+        // Brute-force finds the exact optimal answer
+        expect(weightSum).toBeCloseTo(optimalWeightSum, 2);
+      }, 10000);
+
+      it(`Branch & Bound should find the exact optimal TSP tour weight sum for ${name}`, async () => {
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/metric/${name}`)
+        );
+
+        const tourEdges = branchAndBoundTsp(graph);
+        const weightSum = getWeightSum(tourEdges);
+
+        console.log(
+          `[Branch & Bound] ${name} Tour weight sum: ${weightSum.toFixed(2)} (Exact Optimal: ${optimalWeightSum})`
+        );
+
+        // Branch & Bound finds the exact optimal answer
+        expect(weightSum).toBeCloseTo(optimalWeightSum, 2);
+      }, 10000);
     }
   );
 });
