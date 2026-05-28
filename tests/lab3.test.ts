@@ -2,9 +2,10 @@ import { describe, it, expect } from "vitest";
 import { readGraphFromFileNode } from "../src/io/node-reader";
 import { type WeightedEdge } from "../src/core/types";
 import { doubleTreeAlgorithm } from "../src/algorithms/tsp/doubleTreeTsp";
+import { nearestNeighborTsp } from "../src/algorithms/tsp/nearestNeighborTsp"; // Added Nearest Neighbor import
 import { parseWeightedGraph } from "../src/io/parser";
 
-describe("Lab Assignment - Double Tree TSP Algorithm Runtime Tests", () => {
+describe("Lab Assignment - TSP Algorithms Runtime & Validity Tests", () => {
   // Runtime Limit = Reference time in seconds * 10 (allowed overhead) * 1000 (convert to ms)
   const testCases = [
     {
@@ -36,8 +37,9 @@ describe("Lab Assignment - Double Tree TSP Algorithm Runtime Tests", () => {
   describe.each(testCases)(
     "Testing performance & validity on $name",
     ({ name, maxMs, optimalWeightSum }) => {
+      /// Double Tree Algorithm Tests
+
       it(`Double Tree should process ${name} within ${maxMs}ms`, async () => {
-        // Adjust the directory path if your complete graphs are stored elsewhere
         const graph = await parseWeightedGraph(
           readGraphFromFileNode(`./graphs/metric/${name}`)
         );
@@ -73,6 +75,42 @@ describe("Lab Assignment - Double Tree TSP Algorithm Runtime Tests", () => {
         expect(weightSum).toBeGreaterThanOrEqual(optimalWeightSum - 0.001);
 
         // The tour must respect the 2-approximation bound
+        expect(weightSum).toBeLessThanOrEqual(upperBound + 0.001);
+      });
+
+      /// Nearest Neighbor Algorithm Tests
+      it(`Nearest Neighbor should process ${name} within ${maxMs}ms`, async () => {
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/metric/${name}`)
+        );
+
+        const start = performance.now();
+        nearestNeighborTsp(graph);
+        const end = performance.now();
+
+        const runtimeMs = end - start;
+        console.log(
+          `[Nearest Neighbor] ${name} executed in ${runtimeMs.toFixed(2)}ms (Limit: ${maxMs}ms)`
+        );
+
+        expect(runtimeMs).toBeLessThanOrEqual(maxMs);
+      });
+
+      it(`Nearest Neighbor should find a valid approximate TSP tour weight sum for ${name}`, async () => {
+        const graph = await parseWeightedGraph(
+          readGraphFromFileNode(`./graphs/metric/${name}`)
+        );
+
+        const tourEdges = nearestNeighborTsp(graph);
+        const weightSum = getWeightSum(tourEdges);
+
+        const upperBound = optimalWeightSum * 2;
+
+        console.log(
+          `[Nearest Neighbor] ${name} Tour weight sum: ${weightSum.toFixed(2)} (Optimal: ${optimalWeightSum}, Max Allowed: ${upperBound.toFixed(2)})`
+        );
+
+        expect(weightSum).toBeGreaterThanOrEqual(optimalWeightSum - 0.001);
         expect(weightSum).toBeLessThanOrEqual(upperBound + 0.001);
       });
     }
