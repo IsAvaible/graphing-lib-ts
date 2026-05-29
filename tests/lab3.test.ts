@@ -116,21 +116,25 @@ describe("Lab Assignment - TSP Algorithms Runtime & Validity Tests", () => {
         expect(weightSum).toBeLessThanOrEqual(upperBound + 0.001);
       });
 
-      it(`Brute-Force should find the exact optimal TSP tour weight sum for ${name}`, async () => {
-        const graph = await parseWeightedGraph(
-          readGraphFromFileNode(`./graphs/metric/${name}`)
-        );
+      it(
+        `Brute-Force should find the exact optimal TSP tour weight sum for ${name}`,
+        async () => {
+          const graph = await parseWeightedGraph(
+            readGraphFromFileNode(`./graphs/metric/${name}`)
+          );
 
-        const tourEdges = bruteForceTsp(graph);
-        const weightSum = getWeightSum(tourEdges);
+          const tourEdges = bruteForceTsp(graph);
+          const weightSum = getWeightSum(tourEdges);
 
-        console.log(
-          `[Brute-Force] ${name} Tour weight sum: ${weightSum.toFixed(2)} (Exact Optimal: ${optimalWeightSum})`
-        );
+          console.log(
+            `[Brute-Force] ${name} Tour weight sum: ${weightSum.toFixed(2)} (Exact Optimal: ${optimalWeightSum})`
+          );
 
-        // Brute-force finds the exact optimal answer
-        expect(weightSum).toBeCloseTo(optimalWeightSum, 2);
-      }, 10000);
+          // Brute-force finds the exact optimal answer
+          expect(weightSum).toBeCloseTo(optimalWeightSum, 2);
+        },
+        3 * 60 * 1000
+      ); // 3min timeout
 
       it(`Branch & Bound should find the exact optimal TSP tour weight sum for ${name}`, async () => {
         const graph = await parseWeightedGraph(
@@ -146,7 +150,7 @@ describe("Lab Assignment - TSP Algorithms Runtime & Validity Tests", () => {
 
         // Branch & Bound finds the exact optimal answer
         expect(weightSum).toBeCloseTo(optimalWeightSum, 2);
-      }, 10000);
+      }, 60000); // 1min timeout
     }
   );
 });

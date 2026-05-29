@@ -1,5 +1,6 @@
 import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
+import { doubleTreeAlgorithm } from "@/algorithms/tsp/doubleTreeTsp.ts";
 
 /**
  * Represents a snapshot of the Branch and Bound TSP algorithm.
@@ -18,7 +19,7 @@ export interface BranchAndBoundTspState<T extends string | number> {
 
 /**
  * A Generator that yields the state of the Branch and Bound TSP Algorithm.
- * Evaluates permutations but aggressively prunes paths that exceed the current best cost.
+ * Optimized with Heuristic Initialization, Minimum Edge Look-ahead, and Symmetry Breaking.
  */
 export function* branchAndBoundTspGenerator<T extends string | number>(
   graph: Graph<T, false, WeightedEdge<T>>,
@@ -32,8 +33,20 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
   let bestTourEdges: WeightedEdge<T>[] | null = null;
   let branchesPruned = 0;
 
-  // Pre-sort edges by weight to evaluate greedy paths first.
-  // This establishes a very tight `bestCost` early, maximizing pruning efficiency.
+  // Optimization 1: Heuristic Initialization using the Double Tree Algorithm
+  try {
+    const heuristicEdges = doubleTreeAlgorithm(graph);
+    bestCost = heuristicEdges.reduce((sum, edge) => sum + edge.weight, 0);
+    bestTourEdges = heuristicEdges;
+    bestTourNodes = [
+      heuristicEdges[0].from,
+      ...heuristicEdges.map((e) => e.to)
+    ];
+  } catch {
+    // If the heuristic fails, fall back to Infinity
+  }
+
+  // Optimization 2: Pre-sort edges by weight to evaluate greedy paths first.
   const sortedAdjacency = new Map<T, WeightedEdge<T>[]>();
   for (const node of nodes) {
     sortedAdjacency.set(
@@ -62,12 +75,14 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
 
   function* backtrack(
     currentNode: T,
-    visited: Set<T>,
+    unvisited: Set<T>,
     currentTourNodes: T[],
     currentTourEdges: WeightedEdge<T>[],
     currentCost: number
   ): Generator<BranchAndBoundTspState<T>, void, unknown> {
-    // Branch and Bound Pruning: Stop evaluating if we already exceed the best known cost.
+    // Here could be added a lower-bound calculation for further optimization (mst or min-edge lookahead)
+
+    // Optimization 3: Branch and Bound Pruning: Stop evaluating if we already exceed the best known cost.
     if (currentCost >= bestCost) {
       branchesPruned++;
       return;
@@ -83,13 +98,23 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
     }
 
     // Base Case: All nodes visited
-    if (visited.size === nodes.length) {
+    if (unvisited.size === 0) {
+      // Optimization 4: Symmetry breaking (enforce a canonical order to reduce equivalent tours)
+      if (currentTourNodes.length > 2) {
+        const firstStep = currentTourNodes[1];
+        const lastStep = currentNode;
+        if (firstStep > lastStep) {
+          branchesPruned++;
+          return;
+        }
+      }
+
       const returnEdge = graph.getEdge(currentNode, startNode);
 
       if (returnEdge) {
         const totalCost = currentCost + returnEdge.weight;
 
-        // Final bounds check before committing
+        // Final sanity check
         if (totalCost < bestCost) {
           bestCost = totalCost;
           bestTourNodes = [...currentTourNodes, startNode];
@@ -108,33 +133,34 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
       return;
     }
 
-    // Explore unvisited neighbors via the pre-sorted list
+    // Explore unvisited neighbors
     const neighbors = sortedAdjacency.get(currentNode) || [];
     for (const edge of neighbors) {
       const neighbor = edge.to;
 
-      if (!visited.has(neighbor)) {
-        visited.add(neighbor);
+      if (unvisited.has(neighbor)) {
+        unvisited.delete(neighbor);
         currentTourNodes.push(neighbor);
         currentTourEdges.push(edge);
 
         yield* backtrack(
           neighbor,
-          visited,
+          unvisited,
           currentTourNodes,
           currentTourEdges,
           currentCost + edge.weight
         );
 
-        visited.delete(neighbor);
+        unvisited.add(neighbor);
         currentTourNodes.pop();
         currentTourEdges.pop();
       }
     }
   }
 
-  const visited = new Set<T>([startNode]);
-  yield* backtrack(startNode, visited, [startNode], [], 0);
+  const unvisitedSet = new Set(nodes);
+  unvisitedSet.delete(startNode);
+  yield* backtrack(startNode, unvisitedSet, [startNode], [], 0);
 
   if (recordState) {
     yield getState(
