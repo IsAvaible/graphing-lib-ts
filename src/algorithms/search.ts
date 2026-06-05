@@ -1,4 +1,5 @@
 import { Graph } from "../core/Graph";
+import { runGenerator } from "./utils";
 
 /**
  * Represents a snapshot of the Breadth-First Search (BFS) algorithm at a specific step.
@@ -161,15 +162,5 @@ export function* countConnectedComponentsGenerator<T>(
  * Standard utility wrapper to run the generator instantly and just return the count.
  */
 export function countConnectedComponents<T>(graph: Graph<T, false>): number {
-  const generator = countConnectedComponentsGenerator(graph, false);
-  let result = generator.next();
-
-  if (!result.done) {
-    throw new Error(
-      "Generator should have been exhausted since recordState is false."
-    );
-  }
-
-  // The final return value of the generator is the component count
-  return result.value;
+  return runGenerator(countConnectedComponentsGenerator(graph, false));
 }

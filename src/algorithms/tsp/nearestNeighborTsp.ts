@@ -1,5 +1,6 @@
 import { Graph } from "@/core/Graph";
 import type { WeightedEdge } from "@/core/types";
+import { runGenerator } from "../utils";
 
 /**
  * Represents a snapshot of the Nearest Neighbor TSP algorithm at a specific step.
@@ -103,13 +104,5 @@ export function nearestNeighborTsp<T extends string | number>(
   graph: Graph<T, false, WeightedEdge<T>>,
   startNode?: T
 ): WeightedEdge<T>[] {
-  const generator = nearestNeighborTspGenerator(graph, startNode, false);
-  const result = generator.next();
-
-  if (!result.done) {
-    throw new Error(
-      "Generator should have been exhausted since recordState is false."
-    );
-  }
-  return result.value;
+  return runGenerator(nearestNeighborTspGenerator(graph, startNode, false));
 }

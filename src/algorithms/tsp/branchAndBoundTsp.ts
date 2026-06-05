@@ -1,6 +1,7 @@
 import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
 import { doubleTreeAlgorithm } from "@/algorithms/tsp/doubleTreeTsp.ts";
+import { runGenerator } from "../utils";
 
 /**
  * Represents a snapshot of the Branch and Bound TSP algorithm.
@@ -184,13 +185,5 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
 export function branchAndBoundTsp<T extends string | number>(
   graph: Graph<T, false, WeightedEdge<T>>
 ): WeightedEdge<T>[] {
-  const generator = branchAndBoundTspGenerator(graph, false);
-  const result = generator.next();
-
-  if (!result.done) {
-    throw new Error(
-      "Generator should have been exhausted since recordState is false."
-    );
-  }
-  return result.value;
+  return runGenerator(branchAndBoundTspGenerator(graph, false));
 }

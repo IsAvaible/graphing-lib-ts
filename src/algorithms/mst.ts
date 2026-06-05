@@ -2,6 +2,7 @@ import { Graph } from "../core/Graph";
 import type { WeightedEdge } from "../core/types";
 import { PriorityQueue } from "@/algorithms/datastructures/PriorityQueue.ts";
 import { UnionFind } from "@/algorithms/datastructures/UnionFind.ts";
+import { runGenerator } from "./utils";
 
 /**
  * Represents a snapshot of Prim's algorithm at a specific step.
@@ -187,14 +188,7 @@ export function primsAlgorithm<T extends string | number>(
   graph: Graph<T, false, WeightedEdge<T>>,
   startNode?: T
 ): WeightedEdge<T>[] {
-  const generator = primsAlgorithmGenerator(graph, startNode, false);
-  let result = generator.next();
-
-  while (!result.done) {
-    result = generator.next();
-  }
-
-  return result.value;
+  return runGenerator(primsAlgorithmGenerator(graph, startNode, false));
 }
 
 /**
@@ -203,12 +197,5 @@ export function primsAlgorithm<T extends string | number>(
 export function kruskalsAlgorithm<T extends string | number>(
   graph: Graph<T, false, WeightedEdge<T>>
 ): WeightedEdge<T>[] {
-  const generator = kruskalsAlgorithmGenerator(graph, false, false);
-  let result = generator.next();
-
-  while (!result.done) {
-    result = generator.next();
-  }
-
-  return result.value;
+  return runGenerator(kruskalsAlgorithmGenerator(graph, false, false));
 }

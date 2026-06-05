@@ -1,6 +1,7 @@
 import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
 import { PriorityQueue } from "@/algorithms/datastructures/PriorityQueue.ts";
+import { runGenerator } from "../utils";
 
 /**
  * Represents a snapshot of Dijkstra's algorithm at a specific step.
@@ -54,6 +55,11 @@ export function* dijkstraGenerator<T extends string | number>(
   const pq = new PriorityQueue<{ node: T; distance: number }>(
     (a, b) => a.distance - b.distance
   );
+
+  for (const node of nodes) {
+    distances.set(node, Infinity);
+    predecessors.set(node, null);
+  }
 
   distances.set(actualStartNode, 0);
   pq.push({ node: actualStartNode, distance: 0 });
@@ -123,12 +129,5 @@ export function dijkstra<T extends string | number>(
   graph: Graph<T, boolean, WeightedEdge<T>>,
   startNode?: T
 ): DijkstraResult<T> {
-  const generator = dijkstraGenerator(graph, startNode, false);
-  let result = generator.next();
-
-  while (!result.done) {
-    result = generator.next();
-  }
-
-  return result.value;
+  return runGenerator(dijkstraGenerator(graph, startNode, false));
 }

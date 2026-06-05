@@ -4,7 +4,7 @@ import type { UnweightedEdge, WeightedEdge } from "../src/core/types";
 
 describe("Core Graph Structure", () => {
   it("should allow adding generic node types (e.g., strings)", () => {
-    const graph = new Graph<string>();
+    const graph = new Graph<string>(false);
     graph.addNode("Aachen");
     graph.addNode("Cologne");
 

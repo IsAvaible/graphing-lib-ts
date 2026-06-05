@@ -2,6 +2,7 @@ import { kruskalsAlgorithm } from "../mst";
 import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
 import { depthFirstSearch } from "@/algorithms/search.ts";
+import { runGenerator } from "../utils";
 
 /**
  * Represents a snapshot of the Double Tree algorithm at a specific step.
@@ -116,13 +117,5 @@ export function* doubleTreeAlgorithmGenerator<T extends string | number>(
 export function doubleTreeAlgorithm<T extends string | number>(
   graph: Graph<T, false, WeightedEdge<T>>
 ): WeightedEdge<T>[] {
-  const generator = doubleTreeAlgorithmGenerator(graph, false);
-  const result = generator.next();
-
-  if (!result.done) {
-    throw new Error(
-      "Generator should have been exhausted since recordState is false."
-    );
-  }
-  return result.value;
+  return runGenerator(doubleTreeAlgorithmGenerator(graph, false));
 }

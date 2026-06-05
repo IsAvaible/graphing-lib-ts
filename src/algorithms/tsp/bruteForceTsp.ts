@@ -1,5 +1,6 @@
 import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
+import { runGenerator } from "../utils";
 
 /**
  * Represents a snapshot of the Brute-Force TSP algorithm at a specific step.
@@ -140,13 +141,5 @@ export function* bruteForceTspGenerator<T extends string | number>(
 export function bruteForceTsp<T extends string | number>(
   graph: Graph<T, false, WeightedEdge<T>>
 ): WeightedEdge<T>[] {
-  const generator = bruteForceTspGenerator(graph, false);
-  const result = generator.next();
-
-  if (!result.done) {
-    throw new Error(
-      "Generator should have been exhausted since recordState is false."
-    );
-  }
-  return result.value;
+  return runGenerator(bruteForceTspGenerator(graph, false));
 }

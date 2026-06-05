@@ -15,6 +15,7 @@ import { nearestNeighborTspGenerator } from "@/algorithms/tsp/nearestNeighborTsp
 import { bruteForceTspGenerator } from "@/algorithms/tsp/bruteForceTsp.ts";
 import { branchAndBoundTspGenerator } from "@/algorithms/tsp/branchAndBoundTsp.ts";
 import { dijkstraGenerator } from "@/algorithms/sssp/dijkstra.ts";
+import type { UnweightedEdge } from "@/core/types.ts";
 
 export function* connectedComponentsVisualizer<T>(
   graph: Graph<T>
@@ -74,7 +75,7 @@ export function* kruskalVisualizer<T extends string | number>(
   const algorithm = kruskalsAlgorithmGenerator(graph);
 
   // Cache the subGraph object to prevent D3 from re-rendering layout coordinates
-  let lastSubGraph: Graph<T> | undefined;
+  let lastSubGraph: Graph<T, false, UnweightedEdge<T>> | undefined;
 
   for (const state of algorithm) {
     const mstEdges = new Set(
@@ -94,7 +95,7 @@ export function* kruskalVisualizer<T extends string | number>(
     let subVisualState: VisualState<T> | null = null;
 
     if (state.ufState) {
-      subGraph = new Graph<T>();
+      subGraph = new Graph<T, false, UnweightedEdge<T>>(false);
       state.ufState.activeNodes.forEach((n) => subGraph!.addNode(n));
       state.ufState.activeEdges.forEach((edge) => {
         subGraph!.addEdge({ ...edge, kind: "unweighted" });
