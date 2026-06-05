@@ -7,12 +7,14 @@ import {
 import {
   type VisualState,
   INITIAL_VISUAL_STATE,
-  getEdgeKey
+  getEdgeKey,
+  type EdgeKey
 } from "@/ui/types.ts";
 import { doubleTreeAlgorithmGenerator } from "@/algorithms/tsp/doubleTreeTsp.ts";
 import { nearestNeighborTspGenerator } from "@/algorithms/tsp/nearestNeighborTsp.ts";
 import { bruteForceTspGenerator } from "@/algorithms/tsp/bruteForceTsp.ts";
 import { branchAndBoundTspGenerator } from "@/algorithms/tsp/branchAndBoundTsp.ts";
+import { dijkstraGenerator } from "@/algorithms/sssp/dijkstra.ts";
 
 export function* connectedComponentsVisualizer<T>(
   graph: Graph<T>
@@ -258,5 +260,38 @@ export function* branchAndBoundVisualizer<T extends string | number>(
         frontierEdges: bestTourEdges // Best optimal path ghosted in the background
       };
     }
+  }
+}
+
+export function* dijkstraVisualizer<T extends string | number>(
+  graph: Graph<T>
+): Generator<VisualState<T>, void, unknown> {
+  const nodes = graph.getNodes();
+  if (nodes.length === 0) return;
+  const startNode = nodes[0];
+
+  const algorithm = dijkstraGenerator(graph as any, startNode);
+
+  for (const state of algorithm) {
+    const highlightedEdges = new Set<EdgeKey>();
+    for (const [node, pred] of state.predecessors.entries()) {
+      if (pred !== null) {
+        highlightedEdges.add(getEdgeKey(node, pred));
+      }
+    }
+
+    const queuedNodes = new Set(state.queue.map((q) => q.node));
+    const evaluatingEdge = state.evaluatingEdge
+      ? getEdgeKey(state.evaluatingEdge.from, state.evaluatingEdge.to)
+      : null;
+
+    yield {
+      ...INITIAL_VISUAL_STATE,
+      currentNode: state.currentNode,
+      visitedNodes: new Set(state.visitedNodes),
+      queuedNodes,
+      highlightedEdges,
+      evaluatingEdge
+    };
   }
 }

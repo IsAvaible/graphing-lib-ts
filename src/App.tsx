@@ -7,7 +7,8 @@ import {
   doubleTreeVisualizer,
   nearestNeighborVisualizer,
   bruteForceVisualizer,
-  branchAndBoundVisualizer
+  branchAndBoundVisualizer,
+  dijkstraVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
@@ -37,7 +38,8 @@ type AlgorithmOption =
   | "DOUBLE_TREE"
   | "NEAREST_NEIGHBOR"
   | "BRUTE_FORCE"
-  | "BRANCH_AND_BOUND";
+  | "BRANCH_AND_BOUND"
+  | "DIJKSTRA";
 
 export const App: React.FC = () => {
   const [graph, setGraph] = useState<Graph<number> | null>(null);
@@ -63,6 +65,8 @@ export const App: React.FC = () => {
         return bruteForceVisualizer(graph);
       case "BRANCH_AND_BOUND":
         return branchAndBoundVisualizer(graph);
+      case "DIJKSTRA":
+        return dijkstraVisualizer(graph);
       default:
         return null;
     }
@@ -134,6 +138,7 @@ export const App: React.FC = () => {
                 <SelectItem value="BRANCH_AND_BOUND">
                   Branch & Bound TSP
                 </SelectItem>
+                <SelectItem value="DIJKSTRA">Dijkstra Shortest Path</SelectItem>
               </SelectContent>
             </Select>
           </div>
