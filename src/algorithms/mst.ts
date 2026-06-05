@@ -1,6 +1,6 @@
 import { Graph } from "../core/Graph";
 import type { WeightedEdge } from "../core/types";
-import { MinPriorityQueue } from "@/algorithms/datastructures/MinPriorityQueue.ts";
+import { PriorityQueue } from "@/algorithms/datastructures/PriorityQueue.ts";
 import { UnionFind } from "@/algorithms/datastructures/UnionFind.ts";
 
 /**
@@ -44,7 +44,7 @@ export function* primsAlgorithmGenerator<T extends string | number>(
 
   const visited = new Set<T>();
   const mstEdges: WeightedEdge<T>[] = [];
-  const pq = new MinPriorityQueue<T>();
+  const pq = new PriorityQueue<WeightedEdge<T>>((a, b) => a.weight - b.weight);
 
   // Helper to extract new weighted edges from a newly visited node
   const addEdgesFrom = (node: T) => {

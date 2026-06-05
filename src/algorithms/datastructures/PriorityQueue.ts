@@ -1,17 +1,26 @@
-import type { WeightedEdge } from "@/core/types.ts";
-
 /**
- * Internal Min-Priority Queue for Prim's Algorithm optimization (O(log E) insertions/extractions).
+ * A generic, strictly-typed binary heap implementation of a Priority Queue.
+ * Accepts a custom comparator function to determine priorities.
  */
-export class MinPriorityQueue<T extends string | number> {
-  private heap: WeightedEdge<T>[] = [];
+export class PriorityQueue<T> {
+  private heap: T[] = [];
+  private compare: (a: T, b: T) => number;
 
-  push(edge: WeightedEdge<T>): void {
-    this.heap.push(edge);
+  /**
+   * Creates an instance of PriorityQueue.
+   * @param compare A comparator function that returns < 0 if `a` has higher priority than `b`,
+   *                > 0 if `b` has higher priority than `a`, and 0 if they are equal.
+   */
+  constructor(compare: (a: T, b: T) => number) {
+    this.compare = compare;
+  }
+
+  push(item: T): void {
+    this.heap.push(item);
     this.bubbleUp(this.heap.length - 1);
   }
 
-  pop(): WeightedEdge<T> | undefined {
+  pop(): T | undefined {
     if (this.heap.length === 0) return undefined;
     if (this.heap.length === 1) return this.heap.pop();
 
@@ -25,7 +34,7 @@ export class MinPriorityQueue<T extends string | number> {
     return this.heap.length === 0;
   }
 
-  toArray(): WeightedEdge<T>[] {
+  toArray(): T[] {
     return [...this.heap];
   }
 
@@ -33,7 +42,7 @@ export class MinPriorityQueue<T extends string | number> {
     let curr = index;
     while (curr > 0) {
       const parent = Math.floor((curr - 1) / 2);
-      if (this.heap[curr].weight >= this.heap[parent].weight) break;
+      if (this.compare(this.heap[curr], this.heap[parent]) >= 0) break;
       this.swap(curr, parent);
       curr = parent;
     }
@@ -44,19 +53,19 @@ export class MinPriorityQueue<T extends string | number> {
     const length = this.heap.length;
 
     while (true) {
-      let left = 2 * curr + 1;
-      let right = 2 * curr + 2;
+      const left = 2 * curr + 1;
+      const right = 2 * curr + 2;
       let smallest = curr;
 
       if (
         left < length &&
-        this.heap[left].weight < this.heap[smallest].weight
+        this.compare(this.heap[left], this.heap[smallest]) < 0
       ) {
         smallest = left;
       }
       if (
         right < length &&
-        this.heap[right].weight < this.heap[smallest].weight
+        this.compare(this.heap[right], this.heap[smallest]) < 0
       ) {
         smallest = right;
       }
