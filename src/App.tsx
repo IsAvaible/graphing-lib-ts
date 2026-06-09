@@ -8,12 +8,14 @@ import {
   nearestNeighborVisualizer,
   bruteForceVisualizer,
   branchAndBoundVisualizer,
-  dijkstraVisualizer
+  dijkstraVisualizer,
+  flowDecompositionVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
 import { GraphCanvas } from "@/components/GraphCanvas.tsx";
 import { SubWindow } from "@/components/SubWindow.tsx";
+import { type Algorithms } from "@/ui/types.ts";
 import {
   Select,
   SelectContent,
@@ -31,20 +33,9 @@ import {
 import { AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 
-type AlgorithmOption =
-  | "CC"
-  | "PRIM"
-  | "KRUSKAL"
-  | "DOUBLE_TREE"
-  | "NEAREST_NEIGHBOR"
-  | "BRUTE_FORCE"
-  | "BRANCH_AND_BOUND"
-  | "DIJKSTRA";
-
 export const App: React.FC = () => {
   const [graph, setGraph] = useState<Graph<number> | null>(null);
-  const [activeAlgorithm, setActiveAlgorithm] =
-    useState<AlgorithmOption>("PRIM");
+  const [activeAlgorithm, setActiveAlgorithm] = useState<Algorithms>("PRIM");
   const [delayMs, setDelayMs] = useState([600]);
 
   const algorithmFactory = useCallback(() => {
@@ -67,6 +58,8 @@ export const App: React.FC = () => {
         return branchAndBoundVisualizer(graph);
       case "DIJKSTRA":
         return dijkstraVisualizer(graph);
+      case "FLOW_DECOMP":
+        return flowDecompositionVisualizer(graph);
       default:
         return null;
     }
@@ -119,9 +112,7 @@ export const App: React.FC = () => {
             </label>
             <Select
               value={activeAlgorithm}
-              onValueChange={(value) =>
-                setActiveAlgorithm(value as AlgorithmOption)
-              }
+              onValueChange={(value) => setActiveAlgorithm(value as Algorithms)}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select an algorithm" />
@@ -139,6 +130,9 @@ export const App: React.FC = () => {
                   Branch & Bound TSP
                 </SelectItem>
                 <SelectItem value="DIJKSTRA">Dijkstra Shortest Path</SelectItem>
+                <SelectItem value="FLOW_DECOMP">
+                  Flussdekomposition (Ford-Fulkerson)
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -160,7 +154,84 @@ export const App: React.FC = () => {
       )}
 
       {/* Main Visualizer */}
-      <GraphCanvas graph={graph} visualState={visualState} />
+      <GraphCanvas
+        graph={visualState.algorithmData?.graph || graph}
+        visualState={visualState}
+      />
+
+      {/* ALGORITHM NOTES BOX */}
+      {graph && visualState.algorithm === "FLOW_DECOMP" && (
+        <div className="absolute bottom-6 left-6 z-10 w-96 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200 flex flex-col space-y-3 pointer-events-auto transition-all duration-300">
+          <div className="border-b border-gray-100 pb-2">
+            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+              Schritt-Details
+            </h3>
+          </div>
+          <div className="text-sm text-gray-700 leading-relaxed min-h-[50px]">
+            {visualState.algorithmData.notes}
+          </div>
+          {visualState.algorithmData.decomposedPaths.length > 0 && (
+            <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                Zerlegte Komponenten (
+                {visualState.algorithmData.decomposedPaths.length}):
+              </span>
+              <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                {visualState.algorithmData.decomposedPaths.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between text-xs bg-indigo-50 border border-indigo-100 text-indigo-950 p-2 rounded-md font-medium"
+                  >
+                    <div className="flex items-center space-x-1.5 truncate">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          item.isCycle
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-emerald-100 text-emerald-800"
+                        }`}
+                      >
+                        {item.isCycle ? "Kreis" : "Weg"}
+                      </span>
+                      <span className="truncate">
+                        {item.path.join(" \u2192 ")}
+                      </span>
+                    </div>
+                    <span className="font-bold text-indigo-700 shrink-0 pl-2">
+                      Fluss: {item.flow}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Draggable SubWindows for Decomposed Components */}
+      {graph &&
+        visualState.algorithm === "FLOW_DECOMP" &&
+        visualState.algorithmData.decomposedPaths.map((item, idx) => {
+          // Cascade positions so subwindows don't stack perfectly on top of each other
+          const defaultX = 20 + idx * 40;
+          const defaultY = 120 + idx * 40;
+
+          // Scale size of the subwindow based on number of distinct nodes: |nodes| * 75px
+          const numNodes = new Set(item.path).size;
+          const windowSize = Math.max(180, numNodes * 75);
+
+          return (
+            <SubWindow
+              key={`decomp-${idx}`}
+              title={`${item.isCycle ? "Kreis" : "Weg"} ${idx + 1} (Fluss: ${item.flow})`}
+              defaultX={defaultX}
+              defaultY={defaultY}
+              defaultWidth={windowSize}
+              defaultHeight={windowSize}
+            >
+              <GraphCanvas graph={item.graph} visualState={item.visualState} />
+            </SubWindow>
+          );
+        })}
 
       {/* Conditionally Render SubWindow for Algorithms running Sub-Routines */}
       {graph && visualState.subVisualState && (

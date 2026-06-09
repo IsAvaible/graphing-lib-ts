@@ -16,6 +16,8 @@ interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   source: number | GraphNode;
   target: number | GraphNode;
   weight?: number; // Added to store weight for display
+  flow?: number;
+  capacity?: number;
 }
 
 // Helper to reliably get IDs whether D3 has populated the object or not
@@ -46,6 +48,29 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     // Define grid pattern
     const defs = svg.append("defs");
+
+    // Define arrow markers for directed graphs
+    const colors = {
+      default: "#cbd5e1",
+      evaluating: "#f97316",
+      highlighted: "#22c55e",
+      frontier: "#facc15"
+    };
+
+    Object.entries(colors).forEach(([name, color]) => {
+      defs
+        .append("marker")
+        .attr("id", `arrowhead-${name}`)
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 22)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", color);
+    });
     const pattern = defs
       .append("pattern")
       .attr("id", "grid-pattern")
@@ -195,12 +220,22 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
             const existingLink = existingLinks.get(key);
             if (existingLink) {
-              // Just update the weight, keep the D3 object intact
-              if (edge.kind === "weighted") existingLink.weight = edge.weight;
+              // Just update the weight/flow, keep the D3 object intact
+              if (edge.kind === "weighted") {
+                existingLink.weight = edge.weight;
+              } else if (edge.kind === "flow") {
+                existingLink.flow = edge.flow;
+                existingLink.capacity = edge.capacity;
+              }
               newLinksData.push(existingLink);
             } else {
               const link: GraphLink = { source: nodeId, target: edge.to };
-              if (edge.kind === "weighted") link.weight = edge.weight;
+              if (edge.kind === "weighted") {
+                link.weight = edge.weight;
+              } else if (edge.kind === "flow") {
+                link.flow = edge.flow;
+                link.capacity = edge.capacity;
+              }
               newLinksData.push(link);
               topologyChanged = true;
             }
@@ -291,6 +326,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             .attr("stroke", "#e2e8f0")
             .attr("stroke-width", 2)
             .style("opacity", 0)
+            .attr(
+              "marker-end",
+              graph?.isDirected ? "url(#arrowhead-default)" : null
+            )
             .call((e) => e.transition().duration(300).style("opacity", 0.8)),
         (update) => update,
         (exit) =>
@@ -299,19 +338,25 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           )
       );
 
-    // Add Edge Labels for weighted edges
+    // Add Edge Labels for weighted and flow edges
     container
       .select(".edge-labels-group")
       .selectAll<SVGTextElement, GraphLink>("text")
       .data(
-        newLinksData.filter((l) => l.weight !== undefined),
+        newLinksData.filter(
+          (l) =>
+            l.weight !== undefined ||
+            (l.flow !== undefined && l.capacity !== undefined)
+        ),
         (d) => getEdgeKey(getId(d.source), getId(d.target))
       )
       .join(
         (enter) =>
           enter
             .append("text")
-            .text((d) => d.weight!)
+            .text((d) =>
+              d.weight !== undefined ? d.weight : `${d.flow}/${d.capacity}`
+            )
             .attr("font-size", 11)
             .attr("font-weight", "500")
             .attr("fill", "#64748b")
@@ -323,8 +368,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             .style("opacity", 0)
             .call((e) => e.transition().duration(300).style("opacity", 1)),
         (update) => {
-          // Update the text in case the weight changed on an existing edge
-          update.text((d) => d.weight!);
+          update.text((d) =>
+            d.weight !== undefined ? d.weight : `${d.flow}/${d.capacity}`
+          );
           return update;
         },
         (exit) =>
@@ -396,6 +442,32 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         )
           return 4;
         return 2;
+      })
+      .attr("marker-end", (d) => {
+        if (!graph?.isDirected) return null;
+        const key = getEdgeKey(getId(d.source), getId(d.target));
+        if (key === visualState.evaluatingEdge)
+          return "url(#arrowhead-evaluating)";
+        if (visualState.highlightedEdges.has(key))
+          return "url(#arrowhead-highlighted)";
+        if (visualState.frontierEdges.has(key))
+          return "url(#arrowhead-frontier)";
+        return "url(#arrowhead-default)";
+      });
+
+    // Update Edge Label texts dynamically when flows change
+    svg
+      .select(".edge-labels-group")
+      .selectAll<SVGTextElement, GraphLink>("text")
+      .text((d) => {
+        if (graph) {
+          const edge = graph.getEdge(getId(d.source), getId(d.target));
+          if (edge) {
+            if (edge.kind === "weighted") return edge.weight;
+            if (edge.kind === "flow") return `${edge.flow}/${edge.capacity}`;
+          }
+        }
+        return d.weight !== undefined ? d.weight : `${d.flow}/${d.capacity}`;
       });
   }, [visualState]);
 

@@ -15,7 +15,8 @@ import { nearestNeighborTspGenerator } from "@/algorithms/tsp/nearestNeighborTsp
 import { bruteForceTspGenerator } from "@/algorithms/tsp/bruteForceTsp.ts";
 import { branchAndBoundTspGenerator } from "@/algorithms/tsp/branchAndBoundTsp.ts";
 import { dijkstraGenerator } from "@/algorithms/sssp/dijkstra.ts";
-import type { UnweightedEdge } from "@/core/types.ts";
+import { flowDecompositionGenerator } from "@/algorithms/flowDecomposition.ts";
+import type { UnweightedEdge, FlowEdge } from "@/core/types.ts";
 
 export function* connectedComponentsVisualizer<T>(
   graph: Graph<T>
@@ -290,9 +291,83 @@ export function* dijkstraVisualizer<T extends string | number>(
       ...INITIAL_VISUAL_STATE,
       currentNode: state.currentNode,
       visitedNodes: new Set(state.visitedNodes),
-      queuedNodes,
+      queuedNodes: queuedNodes,
       highlightedEdges,
       evaluatingEdge
+    };
+  }
+}
+
+export function* flowDecompositionVisualizer<T extends string | number>(
+  graph: Graph<T>
+): Generator<VisualState<T>, void, unknown> {
+  const algorithm = flowDecompositionGenerator(graph);
+
+  for (const state of algorithm) {
+    const highlightedEdges = new Set<EdgeKey>();
+    for (const key of state.highlightedEdges) {
+      const [from, to] = key.split("->");
+      highlightedEdges.add(getEdgeKey(from as any as T, to as any as T));
+    }
+
+    const frontierEdges = new Set<EdgeKey>();
+    for (const key of state.frontierEdges) {
+      const [from, to] = key.split("->");
+      frontierEdges.add(getEdgeKey(from as any as T, to as any as T));
+    }
+
+    const evaluatingEdge = state.evaluatingEdge
+      ? getEdgeKey(state.evaluatingEdge.from, state.evaluatingEdge.to)
+      : null;
+
+    // Pre-construct subgraphs and visual states to avoid doing this in React's render loop
+    const decomposedPaths = state.decomposedPaths.map((item) => {
+      const sub = new Graph<T, true, FlowEdge<T>>(true);
+      item.path.forEach((node) => sub.addNode(node));
+      for (let i = 0; i < item.path.length - 1; i++) {
+        sub.addEdge({
+          kind: "flow",
+          from: item.path[i],
+          to: item.path[i + 1],
+          flow: item.flow,
+          capacity: item.flow
+        });
+      }
+
+      const subVis: VisualState<T> = {
+        ...INITIAL_VISUAL_STATE,
+        visitedNodes: new Set(item.path),
+        highlightedEdges: new Set(
+          item.path
+            .slice(0, -1)
+            .map((node, i) => getEdgeKey(node, item.path[i + 1]))
+        )
+      };
+
+      return {
+        path: item.path,
+        flow: item.flow,
+        isCycle: item.isCycle,
+        graph: sub,
+        visualState: subVis
+      };
+    });
+
+    yield {
+      visitedNodes: new Set(state.visitedNodes),
+      queuedNodes: new Set(state.queuedNodes),
+      currentNode: state.currentNode,
+      highlightedEdges,
+      frontierEdges,
+      evaluatingEdge,
+      subVisualState: null,
+      subGraph: null,
+      algorithm: "FLOW_DECOMP",
+      algorithmData: {
+        notes: state.notes,
+        graph: state.graph,
+        decomposedPaths
+      }
     };
   }
 }

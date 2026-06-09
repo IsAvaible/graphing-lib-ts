@@ -1,6 +1,18 @@
 import type { Graph } from "@/core/Graph.ts";
+import type { FlowEdge } from "@/core/types.ts";
 
-export interface VisualState<T> {
+export type Algorithms =
+  | "CC"
+  | "PRIM"
+  | "KRUSKAL"
+  | "DOUBLE_TREE"
+  | "NEAREST_NEIGHBOR"
+  | "BRUTE_FORCE"
+  | "BRANCH_AND_BOUND"
+  | "DIJKSTRA"
+  | "FLOW_DECOMP";
+
+export interface BaseVisualState<T> {
   visitedNodes: Set<T>;
   queuedNodes: Set<T>;
   currentNode: T | null;
@@ -11,7 +23,31 @@ export interface VisualState<T> {
   subGraph?: Graph<T> | null;
 }
 
-export const INITIAL_VISUAL_STATE: VisualState<any> = {
+export interface FlowDecompositionVisualState<T> extends BaseVisualState<T> {
+  algorithm: "FLOW_DECOMP";
+  algorithmData: {
+    notes: string;
+    graph: Graph<T, true, FlowEdge<T>>;
+    decomposedPaths: {
+      path: T[];
+      flow: number;
+      isCycle: boolean;
+      graph: Graph<T, true, FlowEdge<T>>;
+      visualState: VisualState<T>;
+    }[];
+  };
+}
+
+export interface DefaultVisualState<T> extends BaseVisualState<T> {
+  algorithm?: Exclude<Algorithms, "FLOW_DECOMP">;
+  algorithmData?: undefined;
+}
+
+export type VisualState<T> =
+  | DefaultVisualState<T>
+  | FlowDecompositionVisualState<T>;
+
+export const INITIAL_VISUAL_STATE: DefaultVisualState<any> = {
   visitedNodes: new Set(),
   queuedNodes: new Set(),
   currentNode: null,

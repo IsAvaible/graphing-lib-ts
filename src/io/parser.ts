@@ -18,21 +18,32 @@ const WeightedEdgeSchema = BaseEdgeSchema.extend({
 
 const FlowEdgeSchema = BaseEdgeSchema.extend({
   capacity: z.coerce.number(),
+  flow: z.coerce.number().default(0),
   cost: z.coerce.number().optional()
 });
 
 const MixedEdgeSchema = BaseEdgeSchema.extend({
   p3: z.coerce.number().optional(),
-  p4: z.coerce.number().optional()
+  p4: z.coerce.number().optional(),
+  p5: z.coerce.number().optional()
 }).transform((val) => {
-  // 4 columns: Flow Edge
+  // 5 columns: Flow Edge with capacity, flow, cost
+  if (val.p5 !== undefined) {
+    return {
+      from: val.from,
+      to: val.to,
+      capacity: val.p3,
+      flow: val.p4,
+      cost: val.p5
+    };
+  }
+  // 4 columns: Flow Edge with capacity, flow
   if (val.p4 !== undefined) {
     return {
       from: val.from,
       to: val.to,
       capacity: val.p3,
-      cost: val.p4,
-      flow: 0
+      flow: val.p4
     };
   }
   // 3 columns: Weighted Edge
@@ -121,9 +132,8 @@ export const parseWeightedGraph = createGraphParser<WeightedEdge<number>>(
 
 export const parseFlowGraph = createGraphParser<FlowEdge<number>>(
   FlowEdgeSchema,
-  ["from", "to", "capacity", "cost"],
-  "flow",
-  { flow: 0 } // Automatically injected into every parsed edge
+  ["from", "to", "capacity", "flow", "cost"],
+  "flow"
 );
 
 /**
@@ -131,7 +141,7 @@ export const parseFlowGraph = createGraphParser<FlowEdge<number>>(
  */
 export const parseMixedGraph = createGraphParser<Edge<number>>(
   MixedEdgeSchema,
-  ["from", "to", "p3", "p4"],
+  ["from", "to", "p3", "p4", "p5"],
   (parts) => {
     if (parts.length >= 4) return "flow";
     if (parts.length === 3) return "weighted";

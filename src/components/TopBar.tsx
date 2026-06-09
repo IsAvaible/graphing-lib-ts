@@ -32,9 +32,26 @@ export const TopBar: React.FC<TopBarProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Read the file lines to detect if it has flow edges
+    const text = await file.text();
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    let isDirected = false;
+
+    if (lines.length > 1) {
+      const firstEdgeLine = lines[1];
+      const parts = firstEdgeLine.split(/\s+/);
+      if (parts.length >= 4) {
+        // 4 columns means Flow Edge. Flow graphs are directed by default.
+        isDirected = true;
+      }
+    }
+
     const graph = await parseMixedGraph(
       await readGraphFromFileBrowser(file),
-      false
+      isDirected
     );
     onGraphLoaded(graph);
   };
