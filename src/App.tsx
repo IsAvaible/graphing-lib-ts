@@ -9,7 +9,8 @@ import {
   bruteForceVisualizer,
   branchAndBoundVisualizer,
   dijkstraVisualizer,
-  flowDecompositionVisualizer
+  flowDecompositionVisualizer,
+  bellmanFordVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
@@ -60,6 +61,8 @@ export const App: React.FC = () => {
         return dijkstraVisualizer(graph);
       case "FLOW_DECOMP":
         return flowDecompositionVisualizer(graph);
+      case "BELLMAN_FORD":
+        return bellmanFordVisualizer(graph);
       default:
         return null;
     }
@@ -130,6 +133,9 @@ export const App: React.FC = () => {
                   Branch & Bound TSP
                 </SelectItem>
                 <SelectItem value="DIJKSTRA">Dijkstra Shortest Path</SelectItem>
+                <SelectItem value="BELLMAN_FORD">
+                  Bellman-Ford Shortest Path
+                </SelectItem>
                 <SelectItem value="FLOW_DECOMP">
                   Flussdekomposition (Ford-Fulkerson)
                 </SelectItem>

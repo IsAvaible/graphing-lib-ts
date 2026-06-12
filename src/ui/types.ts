@@ -10,7 +10,8 @@ export type Algorithms =
   | "BRUTE_FORCE"
   | "BRANCH_AND_BOUND"
   | "DIJKSTRA"
-  | "FLOW_DECOMP";
+  | "FLOW_DECOMP"
+  | "BELLMAN_FORD";
 
 export interface BaseVisualState<T> {
   visitedNodes: Set<T>;

@@ -16,6 +16,7 @@ import { bruteForceTspGenerator } from "@/algorithms/tsp/bruteForceTsp.ts";
 import { branchAndBoundTspGenerator } from "@/algorithms/tsp/branchAndBoundTsp.ts";
 import { dijkstraGenerator } from "@/algorithms/sssp/dijkstra.ts";
 import { flowDecompositionGenerator } from "@/algorithms/flowDecomposition.ts";
+import { bellmanFordGenerator } from "@/algorithms/sssp/bellmanFord.ts";
 import type { UnweightedEdge, FlowEdge } from "@/core/types.ts";
 
 export function* connectedComponentsVisualizer<T>(
@@ -291,7 +292,7 @@ export function* dijkstraVisualizer<T extends string | number>(
       ...INITIAL_VISUAL_STATE,
       currentNode: state.currentNode,
       visitedNodes: new Set(state.visitedNodes),
-      queuedNodes: queuedNodes,
+      queuedNodes,
       highlightedEdges,
       evaluatingEdge
     };
@@ -368,6 +369,45 @@ export function* flowDecompositionVisualizer<T extends string | number>(
         graph: state.graph,
         decomposedPaths
       }
+    };
+  }
+}
+
+export function* bellmanFordVisualizer<T extends string | number>(
+  graph: Graph<T>
+): Generator<VisualState<T>, void, unknown> {
+  const nodes = graph.getNodes();
+  if (nodes.length === 0) return;
+  const startNode = nodes[0];
+
+  const algorithm = bellmanFordGenerator(graph as any, startNode);
+
+  for (const state of algorithm) {
+    const highlightedEdges = new Set<EdgeKey>();
+    for (const [node, pred] of state.predecessors.entries()) {
+      if (pred !== null) {
+        highlightedEdges.add(getEdgeKey(node, pred));
+      }
+    }
+
+    // Mark nodes with finite distances as "visited" (indigo)
+    const visitedNodes = new Set<T>();
+    for (const [node, dist] of state.distances.entries()) {
+      if (dist !== Infinity) {
+        visitedNodes.add(node);
+      }
+    }
+
+    const evaluatingEdge = state.evaluatingEdge
+      ? getEdgeKey(state.evaluatingEdge.from, state.evaluatingEdge.to)
+      : null;
+
+    yield {
+      ...INITIAL_VISUAL_STATE,
+      currentNode: state.currentNode,
+      visitedNodes,
+      highlightedEdges,
+      evaluatingEdge
     };
   }
 }
