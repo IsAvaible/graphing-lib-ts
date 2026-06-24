@@ -33,7 +33,7 @@ describe("Graph Algorithms - Branch and Bound Algorithm (TSP)", () => {
   describe("Generators (Step-by-Step State)", () => {
     it("should prune expensive branches instead of evaluating all permutations", () => {
       const graph = buildCompleteGraph();
-      const generator = branchAndBoundTspGenerator(graph);
+      const generator = branchAndBoundTspGenerator(graph, true, false);
 
       // Initially, it explores down the optimal sorted path
       let state = getNextState(generator);

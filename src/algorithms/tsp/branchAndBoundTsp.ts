@@ -24,7 +24,8 @@ export interface BranchAndBoundTspState<T extends string | number> {
  */
 export function* branchAndBoundTspGenerator<T extends string | number>(
   graph: Graph<T, false, WeightedEdge<T>>,
-  recordState: boolean = true
+  recordState: boolean = true,
+  useDTHeuristic: boolean = true
 ): Generator<BranchAndBoundTspState<T>, WeightedEdge<T>[], unknown> {
   const nodes = graph.getNodes();
   if (nodes.length <= 1) return [];
@@ -34,17 +35,19 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
   let bestTourEdges: WeightedEdge<T>[] | null = null;
   let branchesPruned = 0;
 
-  // Optimization 1: Heuristic Initialization using the Double Tree Algorithm
-  try {
-    const heuristicEdges = doubleTreeAlgorithm(graph);
-    bestCost = heuristicEdges.reduce((sum, edge) => sum + edge.weight, 0);
-    bestTourEdges = heuristicEdges;
-    bestTourNodes = [
-      heuristicEdges[0].from,
-      ...heuristicEdges.map((e) => e.to)
-    ];
-  } catch {
-    // If the heuristic fails, fall back to Infinity
+  if (useDTHeuristic) {
+    // Optimization 1: Heuristic Initialization using the Double Tree Algorithm
+    try {
+      const heuristicEdges = doubleTreeAlgorithm(graph);
+      bestCost = heuristicEdges.reduce((sum, edge) => sum + edge.weight, 0);
+      bestTourEdges = heuristicEdges;
+      bestTourNodes = [
+        heuristicEdges[0].from,
+        ...heuristicEdges.map((e) => e.to)
+      ];
+    } catch {
+      // If the heuristic fails, fall back to Infinity
+    }
   }
 
   // Optimization 2: Pre-sort edges by weight to evaluate greedy paths first.
