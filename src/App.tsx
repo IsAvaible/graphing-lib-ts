@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Graph } from "@/core/Graph.ts";
 import {
   connectedComponentsVisualizer,
@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button.tsx";
 
 export const App: React.FC = () => {
   const [graph, setGraph] = useState<Graph<number> | null>(null);
+  const [graphVersion, setGraphVersion] = useState(0);
   const [activeAlgorithm, setActiveAlgorithm] = useState<Algorithms>("PRIM");
   const [delayMs, setDelayMs] = useState([600]);
 
@@ -74,10 +75,17 @@ export const App: React.FC = () => {
   const { visualState, isPlaying, error, togglePlay, stepForward, reset } =
     useAlgorithmRunner(algorithmFactory, delayMs[0]);
 
+  useEffect(() => {
+    reset();
+  }, [graphVersion, activeAlgorithm]);
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 relative">
       <TopBar
-        onGraphLoaded={setGraph}
+        onGraphLoaded={(newGraph) => {
+          setGraph(newGraph);
+          setGraphVersion((v) => v + 1);
+        }}
         onPlayPause={togglePlay}
         onStep={stepForward}
         onReset={reset}

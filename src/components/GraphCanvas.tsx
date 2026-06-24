@@ -326,17 +326,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             .attr("stroke", "#e2e8f0")
             .attr("stroke-width", 2)
             .style("opacity", 0)
-            .attr(
-              "marker-end",
-              graph?.isDirected ? "url(#arrowhead-default)" : null
-            )
             .call((e) => e.transition().duration(300).style("opacity", 0.8)),
         (update) => update,
         (exit) =>
           exit.call((e) =>
             e.transition().duration(300).style("opacity", 0).remove()
           )
-      );
+      )
+      .attr("marker-end", graph?.isDirected ? "url(#arrowhead-default)" : null);
 
     // Add Edge Labels for weighted and flow edges
     container

@@ -1,8 +1,9 @@
-import React, { type ChangeEvent } from "react";
+import React, { useState, type ChangeEvent } from "react";
 import { Graph } from "@/core/Graph";
 import { readGraphFromFileBrowser } from "@/io/browser-reader.ts";
 import { parseMixedGraph } from "@/io/parser.ts";
 import { Button } from "@/components/ui/button.tsx";
+import { Switch } from "@/components/ui/switch";
 import {
   UploadIcon,
   PlayIcon,
@@ -28,30 +29,29 @@ export const TopBar: React.FC<TopBarProps> = ({
   isPlaying,
   hasGraph
 }) => {
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const [isDirected, setIsDirected] = useState<boolean>(false);
+
   const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Read the file lines to detect if it has flow edges
-    const text = await file.text();
-    const lines = text
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    let isDirected = false;
-
-    if (lines.length > 1) {
-      const firstEdgeLine = lines[1];
-      const parts = firstEdgeLine.split(/\s+/);
-      if (parts.length >= 4) {
-        // 4 columns means Flow Edge. Flow graphs are directed by default.
-        isDirected = true;
-      }
-    }
+    setCurrentFile(file);
 
     const graph = await parseMixedGraph(
       await readGraphFromFileBrowser(file),
       isDirected
+    );
+    onGraphLoaded(graph);
+  };
+
+  const handleToggleDirected = async (checked: boolean) => {
+    setIsDirected(checked);
+    if (!currentFile) return;
+
+    const graph = await parseMixedGraph(
+      await readGraphFromFileBrowser(currentFile),
+      checked
     );
     onGraphLoaded(graph);
   };
@@ -73,6 +73,20 @@ export const TopBar: React.FC<TopBarProps> = ({
             />
           </label>
         </Button>
+
+        <div className="flex items-center gap-2 border-l pl-4">
+          <label
+            htmlFor="directed-toggle"
+            className="text-sm font-semibold text-gray-700 cursor-pointer select-none"
+          >
+            Directed
+          </label>
+          <Switch
+            id="directed-toggle"
+            checked={isDirected}
+            onCheckedChange={handleToggleDirected}
+          />
+        </div>
 
         {hasGraph && (
           <div className="flex items-center gap-2 border-l pl-4 ml-2">
