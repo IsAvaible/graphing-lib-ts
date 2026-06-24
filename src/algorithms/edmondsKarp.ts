@@ -267,7 +267,7 @@ export function* edmondsKarpGenerator<T extends string | number>(
       break;
     }
 
-    // 3. Reconstruct path
+    // Reconstruct path
     const path: ResidualEdge<T>[] = [];
     let curr = t;
     while (curr !== s) {
@@ -277,7 +277,7 @@ export function* edmondsKarpGenerator<T extends string | number>(
     }
     path.reverse();
 
-    // 4. Bottleneck flow calculation
+    // Bottleneck flow calculation
     const delta = Math.min(...path.map((e) => e.capacity));
 
     if (recordState) {
@@ -289,15 +289,18 @@ export function* edmondsKarpGenerator<T extends string | number>(
       );
     }
 
-    // 5. Update flow along path
+    // Update flow along path
     for (const edge of path) {
       if (edge.isBackward) {
         edge.originalEdge.flow -= delta;
       } else {
         edge.originalEdge.flow += delta;
       }
-      // Update residual capacities directly using companion edges
-      edge.capacity = Math.max(0, edge.capacity - delta);
+      const newCapacity = edge.capacity - delta;
+
+      // Push the new capacity to zero
+      edge.capacity = newCapacity <= epsilon ? 0 : newCapacity;
+
       if (edge.companion) {
         edge.companion.capacity += delta;
       }

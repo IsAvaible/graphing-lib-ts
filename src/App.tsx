@@ -10,7 +10,8 @@ import {
   branchAndBoundVisualizer,
   dijkstraVisualizer,
   flowDecompositionVisualizer,
-  bellmanFordVisualizer
+  bellmanFordVisualizer,
+  edmondsKarpVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
@@ -63,6 +64,8 @@ export const App: React.FC = () => {
         return flowDecompositionVisualizer(graph);
       case "BELLMAN_FORD":
         return bellmanFordVisualizer(graph);
+      case "EDMONDS_KARP":
+        return edmondsKarpVisualizer(graph);
       default:
         return null;
     }
@@ -139,6 +142,9 @@ export const App: React.FC = () => {
                 <SelectItem value="FLOW_DECOMP">
                   Flussdekomposition (Ford-Fulkerson)
                 </SelectItem>
+                <SelectItem value="EDMONDS_KARP">
+                  Edmonds-Karp Max Flow
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -212,6 +218,44 @@ export const App: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* ALGORITHM NOTES BOX FOR EDMONDS-KARP */}
+      {graph && visualState.algorithm === "EDMONDS_KARP" && (
+        <div className="absolute bottom-6 left-6 z-10 w-96 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200 flex flex-col space-y-3 pointer-events-auto transition-all duration-300">
+          <div className="border-b border-gray-100 pb-2">
+            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+              Schritt-Details (Edmonds-Karp)
+            </h3>
+          </div>
+          <div className="text-sm text-gray-700 leading-relaxed min-h-[50px]">
+            {visualState.algorithmData.notes}
+          </div>
+          <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+              Maximaler Fluss: {visualState.algorithmData.maxFlow.toFixed(5)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Residual Graph SubWindow for Edmonds-Karp */}
+      {graph &&
+        visualState.algorithm === "EDMONDS_KARP" &&
+        visualState.algorithmData.residualGraph &&
+        visualState.algorithmData.residualVisualState && (
+          <SubWindow
+            title="Residualnetzwerk (Kantenwert = Restkapazität)"
+            defaultX={20}
+            defaultY={120}
+            defaultWidth={400}
+            defaultHeight={400}
+          >
+            <GraphCanvas
+              graph={visualState.algorithmData.residualGraph}
+              visualState={visualState.algorithmData.residualVisualState}
+            />
+          </SubWindow>
+        )}
 
       {/* Draggable SubWindows for Decomposed Components */}
       {graph &&
