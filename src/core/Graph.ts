@@ -1,4 +1,4 @@
-import type { Edge } from "./types";
+import type { Edge, ResidualEdge } from "./types";
 
 export class Graph<
   T = number,
@@ -77,5 +77,28 @@ export class Graph<
    */
   hasNode(id: T): boolean {
     return this.adjacencyList.has(id);
+  }
+
+  /**
+   * Clones the graph. Optionally accepts a transformer function to map edges.
+   */
+  clone<NewE extends Edge<T> = E>(
+    this: Extract<E, ResidualEdge<T>> extends never
+      ? Graph<T, IsDirected, E>
+      : "TypeError: Cannot clone a graph that allows ResidualEdges",
+    edgeTransformer: (edge: E) => NewE = (e) => ({ ...e }) as unknown as NewE
+  ): Graph<T, IsDirected, NewE> {
+    const self = this as unknown as Graph<T, IsDirected, E>;
+    const clonedGraph = new Graph<T, IsDirected, NewE>(self.isDirected);
+
+    for (const [node, edges] of self.adjacencyList.entries()) {
+      // Directly assign mapped edges
+      clonedGraph.adjacencyList.set(
+        node,
+        edges.map((e) => edgeTransformer(e))
+      );
+    }
+
+    return clonedGraph;
   }
 }

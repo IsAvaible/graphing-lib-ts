@@ -20,5 +20,19 @@ export type FlowEdge<T> = {
   cost?: number; // For future application in Cycle-Canceling
 } & BaseEdge<T>;
 
+export type ResidualEdge<T> = {
+  kind: "residual";
+  capacity: number;
+  flow: number;
+  isBackward: boolean;
+  cost: number;
+  originalEdge: FlowEdge<T>;
+  companion?: ResidualEdge<T>;
+} & BaseEdge<T>;
+
 // Discriminated Union
-export type Edge<T> = UnweightedEdge<T> | WeightedEdge<T> | FlowEdge<T>;
+export type Edge<T> =
+  | UnweightedEdge<T>
+  | WeightedEdge<T>
+  | FlowEdge<T>
+  | ResidualEdge<T>;
