@@ -1,6 +1,6 @@
 import { Graph } from "../core/Graph.ts";
 import type { FlowEdge } from "../core/types.ts";
-import { runGenerator } from "./utils.ts";
+import { runGenerator, resolveSourceAndSink } from "./utils.ts";
 
 export interface DecomposedElement<T> {
   path: T[];
@@ -43,38 +43,7 @@ export function* flowDecompositionGenerator<T extends string | number>(
   const decomposedPaths: DecomposedElement<T>[] = [];
 
   // 2. Identify source s and sink t by computing net flows: outgoing - incoming
-  const netFlows = new Map<T, number>();
-  for (const node of clone.getNodes()) {
-    netFlows.set(node, 0);
-  }
-  for (const node of clone.getNodes()) {
-    for (const edge of clone.getNeighbors(node)) {
-      if (edge.flow > 0) {
-        netFlows.set(edge.from, (netFlows.get(edge.from) || 0) + edge.flow);
-        netFlows.set(edge.to, (netFlows.get(edge.to) || 0) - edge.flow);
-      }
-    }
-  }
-
-  let s: T | null = null;
-  let t: T | null = null;
-  let maxOutgoing = 0;
-  let maxIncoming = 0;
-
-  for (const [node, flow] of netFlows.entries()) {
-    if (flow > maxOutgoing) {
-      maxOutgoing = flow;
-      s = node;
-    }
-    if (-flow > maxIncoming) {
-      maxIncoming = -flow;
-      t = node;
-    }
-  }
-
-  // If net flow is zero or negligible, treat s and t as null (we will only find cycles)
-  if (maxOutgoing < 1e-9) s = null;
-  if (maxIncoming < 1e-9) t = null;
+  const { s, t } = resolveSourceAndSink(clone, false);
 
   // Helper to extract state
   const getState = (
