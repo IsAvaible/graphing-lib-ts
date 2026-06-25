@@ -34,14 +34,16 @@ export function* connectedComponentsVisualizer<T>(
         ...INITIAL_VISUAL_STATE,
         currentNode: state.bfsState.currentNode,
         visitedNodes: new Set(state.visitedNodes),
-        queuedNodes: new Set(state.bfsState.queue)
+        queuedNodes: new Set(state.bfsState.queue),
+        notes: state.notes
       };
     } else {
       yield {
         ...INITIAL_VISUAL_STATE,
         currentNode: state.evaluatingNode,
         visitedNodes: new Set(state.visitedNodes),
-        queuedNodes: new Set()
+        queuedNodes: new Set(),
+        notes: state.notes
       };
     }
   }
@@ -70,7 +72,8 @@ export function* primVisualizer<T extends string | number>(
       currentNode: state.evaluatingEdge ? state.evaluatingEdge.to : null,
       highlightedEdges: mstEdges,
       frontierEdges: availableEdges,
-      evaluatingEdge
+      evaluatingEdge,
+      notes: state.notes
     };
   }
 }
@@ -121,7 +124,8 @@ export function* kruskalVisualizer<T extends string | number>(
       highlightedEdges: mstEdges,
       evaluatingEdge,
       subGraph,
-      subVisualState
+      subVisualState,
+      notes: state.notes
     };
   }
 }
@@ -153,7 +157,8 @@ export function* doubleTreeVisualizer<T extends string | number>(
       yield {
         ...INITIAL_VISUAL_STATE,
         visitedNodes,
-        highlightedEdges: mstEdges
+        highlightedEdges: mstEdges,
+        notes: state.notes
       };
     } else {
       // Phase 2 & 3: Show the MST as background (frontierEdges) and the TSP Tour as highlighted
@@ -163,7 +168,8 @@ export function* doubleTreeVisualizer<T extends string | number>(
         currentNode: state.evaluatingNode,
         highlightedEdges: tourEdges,
         frontierEdges: mstEdges, // Keeps the underlying MST visible
-        evaluatingEdge
+        evaluatingEdge,
+        notes: state.notes
       };
     }
   }
@@ -187,7 +193,8 @@ export function* nearestNeighborVisualizer<T extends string | number>(
       visitedNodes: new Set(state.tourNodes),
       currentNode: state.evaluatingNode,
       highlightedEdges: tourEdges,
-      evaluatingEdge
+      evaluatingEdge,
+      notes: state.notes
     };
   }
 }
@@ -206,7 +213,8 @@ export function* bruteForceVisualizer<T extends string | number>(
       yield {
         ...INITIAL_VISUAL_STATE,
         visitedNodes: new Set(state.bestTourNodes || []),
-        highlightedEdges: bestTourEdges
+        highlightedEdges: bestTourEdges,
+        notes: state.notes
       };
     } else {
       const currentTourEdges = new Set(
@@ -225,7 +233,8 @@ export function* bruteForceVisualizer<T extends string | number>(
         visitedNodes: new Set(state.currentTourNodes),
         currentNode,
         highlightedEdges: currentTourEdges,
-        frontierEdges: bestTourEdges // Ghosts the current optimal tour in the background
+        frontierEdges: bestTourEdges, // Ghosts the current optimal tour in the background
+        notes: state.notes
       };
     }
   }
@@ -245,7 +254,8 @@ export function* branchAndBoundVisualizer<T extends string | number>(
       yield {
         ...INITIAL_VISUAL_STATE,
         visitedNodes: new Set(state.bestTourNodes || []),
-        highlightedEdges: bestTourEdges
+        highlightedEdges: bestTourEdges,
+        notes: state.notes
       };
     } else {
       const currentTourEdges = new Set(
@@ -264,7 +274,8 @@ export function* branchAndBoundVisualizer<T extends string | number>(
         visitedNodes: new Set(state.currentTourNodes),
         currentNode,
         highlightedEdges: currentTourEdges,
-        frontierEdges: bestTourEdges // Best optimal path ghosted in the background
+        frontierEdges: bestTourEdges, // Best optimal path ghosted in the background
+        notes: state.notes
       };
     }
   }
@@ -298,7 +309,8 @@ export function* dijkstraVisualizer<T extends string | number>(
       visitedNodes: new Set(state.visitedNodes),
       queuedNodes,
       highlightedEdges,
-      evaluatingEdge
+      evaluatingEdge,
+      notes: state.notes
     };
   }
 }
@@ -367,6 +379,7 @@ export function* flowDecompositionVisualizer<T extends string | number>(
       evaluatingEdge,
       subVisualState: null,
       subGraph: null,
+      notes: state.notes,
       algorithm: "FLOW_DECOMP",
       algorithmData: {
         notes: state.notes,
@@ -411,7 +424,8 @@ export function* bellmanFordVisualizer<T extends string | number>(
       currentNode: state.currentNode,
       visitedNodes,
       highlightedEdges,
-      evaluatingEdge
+      evaluatingEdge,
+      notes: state.notes
     };
   }
 }
@@ -493,6 +507,7 @@ export function* edmondsKarpVisualizer<T extends string | number>(
       evaluatingEdge,
       subVisualState: null,
       subGraph: null,
+      notes: state.notes,
       algorithm: "EDMONDS_KARP",
       algorithmData: {
         notes: state.notes,

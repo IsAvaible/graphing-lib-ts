@@ -1,6 +1,7 @@
 import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
 import { runGenerator } from "../utils";
+import type { LocalizedNote } from "@/lib/localization.ts";
 
 /**
  * Represents a snapshot of the Moore-Bellman-Ford algorithm at a specific step.
@@ -12,6 +13,7 @@ export interface BellmanFordState<T extends string | number> {
   predecessors: Map<T, T | null>; // Shortest path tree structure
   evaluatingEdge: WeightedEdge<T> | null; // Edge currently being evaluated/relaxed
   iteration: number; // Current iteration index (1 to V)
+  notes?: LocalizedNote;
 }
 
 /**
@@ -60,18 +62,23 @@ export function* bellmanFordGenerator<T extends string | number>(
   const getState = (
     currentNode: T | null,
     evaluatingEdge: WeightedEdge<T> | null,
-    iteration: number
+    iteration: number,
+    notes?: LocalizedNote
   ): BellmanFordState<T> => ({
     currentNode,
     distances: new Map(distances),
     predecessors: new Map(predecessors),
     evaluatingEdge,
-    iteration
+    iteration,
+    notes
   });
 
   // Yield initial state
   if (recordState) {
-    yield getState(null, null, 0);
+    yield getState(null, null, 0, {
+      key: "bellman_ford.init",
+      params: { startNode: actualStartNode }
+    });
   }
 
   // Relax edges |V| - 1 times
@@ -90,7 +97,15 @@ export function* bellmanFordGenerator<T extends string | number>(
 
         // Yield that we are evaluating this edge
         if (recordState) {
-          yield getState(u, edge, i);
+          yield getState(u, edge, i, {
+            key: "bellman_ford.evaluate_edge",
+            params: {
+              iteration: i,
+              from: edge.from,
+              to: edge.to,
+              weight: edge.weight
+            }
+          });
         }
 
         const alt = distU + edge.weight;
@@ -103,7 +118,15 @@ export function* bellmanFordGenerator<T extends string | number>(
 
           // Yield to show the relaxation and updated predecessor
           if (recordState) {
-            yield getState(u, edge, i);
+            yield getState(u, edge, i, {
+              key: "bellman_ford.relax_edge",
+              params: {
+                iteration: i,
+                from: edge.from,
+                to: edge.to,
+                newDist: alt
+              }
+            });
           }
         }
       }
@@ -125,7 +148,10 @@ export function* bellmanFordGenerator<T extends string | number>(
 
       // Yield that we are evaluating this edge for negative cycles
       if (recordState) {
-        yield getState(u, edge, V);
+        yield getState(u, edge, V, {
+          key: "bellman_ford.check_negative_cycle",
+          params: { from: edge.from, to: edge.to, weight: edge.weight }
+        });
       }
 
       const alt = distU + edge.weight;
@@ -134,7 +160,10 @@ export function* bellmanFordGenerator<T extends string | number>(
       if (alt < distV) {
         // Yield the state showing where the negative cycle detection failed
         if (recordState) {
-          yield getState(u, edge, V);
+          yield getState(u, edge, V, {
+            key: "bellman_ford.check_negative_cycle",
+            params: { from: edge.from, to: edge.to, weight: edge.weight }
+          });
         }
         // TODO: Convert this to an output instead of an error
         throw new Error("Negative weight cycle detected.");
@@ -144,7 +173,9 @@ export function* bellmanFordGenerator<T extends string | number>(
 
   // Clear current node and evaluating edge at completion
   if (recordState) {
-    yield getState(null, null, V);
+    yield getState(null, null, V, {
+      key: "bellman_ford.complete"
+    });
   }
 
   return { distances, predecessors };

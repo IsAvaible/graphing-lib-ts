@@ -1,5 +1,6 @@
 import { Graph } from "../core/Graph";
 import { runGenerator } from "./utils";
+import type { LocalizedNote } from "../lib/localization.ts";
 
 /**
  * Represents a snapshot of the Breadth-First Search (BFS) algorithm at a specific step.
@@ -31,6 +32,7 @@ export interface ConnectedComponentsState<T> {
   evaluatingNode: T;
   /** If currently traversing a new component, the nested BFS state is provided here. */
   bfsState?: BFSState<T>;
+  notes?: LocalizedNote;
 }
 
 /**
@@ -134,7 +136,11 @@ export function* countConnectedComponentsGenerator<T>(
       yield {
         componentCount,
         visitedNodes: new Set(visited),
-        evaluatingNode: startNode
+        evaluatingNode: startNode,
+        notes: {
+          key: "cc.start_component",
+          params: { node: startNode, count: componentCount + 1 }
+        }
       };
     }
 
@@ -149,7 +155,15 @@ export function* countConnectedComponentsGenerator<T>(
         componentCount,
         visitedNodes: new Set(visited),
         evaluatingNode: startNode,
-        bfsState: step
+        bfsState: step,
+        notes: {
+          key: "cc.traverse_bfs",
+          params: {
+            count: componentCount,
+            currentNode: step.currentNode,
+            queue: step.queue
+          }
+        }
       };
     }
   }

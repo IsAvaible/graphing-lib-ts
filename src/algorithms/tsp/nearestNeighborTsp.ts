@@ -1,6 +1,7 @@
 import { Graph } from "@/core/Graph";
 import type { WeightedEdge } from "@/core/types";
 import { runGenerator } from "../utils";
+import type { LocalizedNote } from "@/lib/localization.ts";
 
 /**
  * Represents a snapshot of the Nearest Neighbor TSP algorithm at a specific step.
@@ -12,6 +13,7 @@ export interface NearestNeighborState<T extends string | number> {
   unvisitedNodes: Set<T>;
   evaluatingNode: T | null;
   evaluatingEdge: WeightedEdge<T> | null;
+  notes?: LocalizedNote;
 }
 
 /**
@@ -38,17 +40,24 @@ export function* nearestNeighborTspGenerator<T extends string | number>(
   const getState = (
     phase: "searching" | "complete",
     evaluatingNode: T | null = null,
-    evaluatingEdge: WeightedEdge<T> | null = null
+    evaluatingEdge: WeightedEdge<T> | null = null,
+    notes?: LocalizedNote
   ): NearestNeighborState<T> => ({
     phase,
     tourNodes: [...tourNodes],
     tourEdges: [...tourEdges],
     unvisitedNodes: new Set(unvisitedNodes),
     evaluatingNode,
-    evaluatingEdge
+    evaluatingEdge,
+    notes
   });
 
-  if (recordState) yield getState("searching", currentNode);
+  if (recordState) {
+    yield getState("searching", currentNode, null, {
+      key: "nearest_neighbor.init",
+      params: { currentNode }
+    });
+  }
 
   // Pick the closest unvisited neighbor until all nodes are visited
   while (unvisitedNodes.size > 0) {
@@ -76,7 +85,12 @@ export function* nearestNeighborTspGenerator<T extends string | number>(
     tourEdges.push(minEdge);
     unvisitedNodes.delete(minEdge.to);
 
-    if (recordState) yield getState("searching", currentNode, minEdge);
+    if (recordState) {
+      yield getState("searching", currentNode, minEdge, {
+        key: "nearest_neighbor.visit_node",
+        params: { from: currentNode, to: minEdge.to, weight: minEdge.weight }
+      });
+    }
 
     currentNode = minEdge.to;
   }
@@ -92,7 +106,11 @@ export function* nearestNeighborTspGenerator<T extends string | number>(
     tourEdges.push(closingEdge);
   }
 
-  if (recordState) yield getState("complete");
+  if (recordState) {
+    yield getState("complete", null, null, {
+      key: "nearest_neighbor.complete"
+    });
+  }
 
   return tourEdges;
 }

@@ -2,6 +2,7 @@ import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
 import { PriorityQueue } from "@/algorithms/datastructures/PriorityQueue.ts";
 import { runGenerator } from "../utils";
+import type { LocalizedNote } from "@/lib/localization.ts";
 
 /**
  * Represents a snapshot of Dijkstra's algorithm at a specific step.
@@ -14,6 +15,7 @@ export interface DijkstraState<T extends string | number> {
   predecessors: Map<T, T | null>; // Shortest path tree structure
   queue: { node: T; distance: number }[]; // Nodes currently in the priority queue
   evaluatingEdge: WeightedEdge<T> | null; // Edge currently being relaxed
+  notes?: LocalizedNote;
 }
 
 /**
@@ -66,15 +68,24 @@ export function* dijkstraGenerator<T extends string | number>(
 
   const getState = (
     currentNode: T | null,
-    evaluatingEdge: WeightedEdge<T> | null
+    evaluatingEdge: WeightedEdge<T> | null,
+    notes?: LocalizedNote
   ): DijkstraState<T> => ({
     currentNode,
     visitedNodes: new Set(visitedNodes),
     distances: new Map(distances),
     predecessors: new Map(predecessors),
     queue: pq.toArray(),
-    evaluatingEdge
+    evaluatingEdge,
+    notes
   });
+
+  if (recordState) {
+    yield getState(null, null, {
+      key: "dijkstra.start",
+      params: { startNode: actualStartNode }
+    });
+  }
 
   while (!pq.isEmpty()) {
     const { node: u, distance: distU } = pq.pop()!;
@@ -86,7 +97,10 @@ export function* dijkstraGenerator<T extends string | number>(
 
     // Yield when we pop a node to evaluate
     if (recordState) {
-      yield getState(u, null);
+      yield getState(u, null, {
+        key: "dijkstra.pop_node",
+        params: { u, dist: distU }
+      });
     }
 
     // Relax all outgoing edges of node u
@@ -95,7 +109,10 @@ export function* dijkstraGenerator<T extends string | number>(
 
       // Yield that we are evaluating this edge
       if (recordState) {
-        yield getState(u, edge);
+        yield getState(u, edge, {
+          key: "dijkstra.evaluate_edge",
+          params: { from: edge.from, to: edge.to, weight: edge.weight }
+        });
       }
 
       const alt = distU + edge.weight;
@@ -108,7 +125,10 @@ export function* dijkstraGenerator<T extends string | number>(
 
         // Yield to show the relaxation and updated predecessor
         if (recordState) {
-          yield getState(u, edge);
+          yield getState(u, edge, {
+            key: "dijkstra.relax_edge",
+            params: { from: edge.from, to: edge.to, newDist: alt }
+          });
         }
       }
     }
@@ -116,7 +136,7 @@ export function* dijkstraGenerator<T extends string | number>(
 
   // Clear current node and evaluating edge at completion
   if (recordState) {
-    yield getState(null, null);
+    yield getState(null, null, { key: "dijkstra.complete" });
   }
 
   return { distances, predecessors };

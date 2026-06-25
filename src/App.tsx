@@ -18,6 +18,7 @@ import { TopBar } from "@/components/TopBar.tsx";
 import { GraphCanvas } from "@/components/GraphCanvas.tsx";
 import { SubWindow } from "@/components/SubWindow.tsx";
 import { type Algorithms } from "@/ui/types.ts";
+import { translateNote, translate, type Language } from "@/lib/localization.ts";
 import {
   Select,
   SelectContent,
@@ -40,6 +41,7 @@ export const App: React.FC = () => {
   const [graphVersion, setGraphVersion] = useState(0);
   const [activeAlgorithm, setActiveAlgorithm] = useState<Algorithms>("PRIM");
   const [delayMs, setDelayMs] = useState([600]);
+  const [language, setLanguage] = useState<Language>("de");
 
   const algorithmFactory = useCallback(() => {
     if (!graph) return null;
@@ -170,6 +172,24 @@ export const App: React.FC = () => {
               className="w-[180px]"
             />
           </div>
+
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-semibold text-gray-700 min-w-[70px]">
+              Language:
+            </label>
+            <Select
+              value={language}
+              onValueChange={(value) => setLanguage(value as Language)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="de">Deutsch</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
 
@@ -179,70 +199,90 @@ export const App: React.FC = () => {
         visualState={visualState}
       />
 
-      {/* ALGORITHM NOTES BOX */}
-      {graph && visualState.algorithm === "FLOW_DECOMP" && (
+      {/* UNIFIED ALGORITHM NOTES BOX */}
+      {graph && visualState.notes && (
         <div className="absolute bottom-6 left-6 z-10 w-96 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200 flex flex-col space-y-3 pointer-events-auto transition-all duration-300">
           <div className="border-b border-gray-100 pb-2">
             <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
-              Schritt-Details
+              {translate(
+                visualState.algorithm === "EDMONDS_KARP"
+                  ? "notes.title_ek"
+                  : "notes.title",
+                language
+              )}
             </h3>
           </div>
           <div className="text-sm text-gray-700 leading-relaxed min-h-[50px]">
-            {visualState.algorithmData.notes}
+            {translateNote(visualState.notes, language)}
           </div>
-          {visualState.algorithmData.decomposedPaths.length > 0 && (
-            <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                Zerlegte Komponenten (
-                {visualState.algorithmData.decomposedPaths.length}):
-              </span>
-              <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-                {visualState.algorithmData.decomposedPaths.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between text-xs bg-indigo-50 border border-indigo-100 text-indigo-950 p-2 rounded-md font-medium"
-                  >
-                    <div className="flex items-center space-x-1.5 truncate">
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                          item.isCycle
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-emerald-100 text-emerald-800"
-                        }`}
-                      >
-                        {item.isCycle ? "Kreis" : "Weg"}
-                      </span>
-                      <span className="truncate">
-                        {item.path.join(" \u2192 ")}
-                      </span>
-                    </div>
-                    <span className="font-bold text-indigo-700 shrink-0 pl-2">
-                      Fluss: {item.flow}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* ALGORITHM NOTES BOX FOR EDMONDS-KARP */}
-      {graph && visualState.algorithm === "EDMONDS_KARP" && (
-        <div className="absolute bottom-6 left-6 z-10 w-96 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200 flex flex-col space-y-3 pointer-events-auto transition-all duration-300">
-          <div className="border-b border-gray-100 pb-2">
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
-              Schritt-Details (Edmonds-Karp)
-            </h3>
-          </div>
-          <div className="text-sm text-gray-700 leading-relaxed min-h-[50px]">
-            {visualState.algorithmData.notes}
-          </div>
-          <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-              Maximaler Fluss: {visualState.algorithmData.maxFlow.toFixed(5)}
-            </span>
-          </div>
+          {/* Edmonds-Karp specific max flow display */}
+          {visualState.algorithm === "EDMONDS_KARP" &&
+            visualState.algorithmData && (
+              <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                  {translateNote(
+                    {
+                      key: "notes.max_flow",
+                      params: { maxFlow: visualState.algorithmData.maxFlow }
+                    },
+                    language
+                  )}
+                </span>
+              </div>
+            )}
+
+          {/* Flow Decomposition specific decomposed components display */}
+          {visualState.algorithm === "FLOW_DECOMP" &&
+            visualState.algorithmData &&
+            visualState.algorithmData.decomposedPaths.length > 0 && (
+              <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                  {translateNote(
+                    {
+                      key: "notes.decomposed_components",
+                      params: {
+                        count: visualState.algorithmData.decomposedPaths.length
+                      }
+                    },
+                    language
+                  )}
+                </span>
+                <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                  {visualState.algorithmData.decomposedPaths.map(
+                    (item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between text-xs bg-indigo-50 border border-indigo-100 text-indigo-950 p-2 rounded-md font-medium"
+                      >
+                        <div className="flex items-center space-x-1.5 truncate">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              item.isCycle
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-emerald-100 text-emerald-800"
+                            }`}
+                          >
+                            {translate(
+                              item.isCycle
+                                ? "notes.type_cycle"
+                                : "notes.type_path",
+                              language
+                            )}
+                          </span>
+                          <span className="truncate">
+                            {item.path.join(" \u2192 ")}
+                          </span>
+                        </div>
+                        <span className="font-bold text-indigo-700 shrink-0 pl-2">
+                          {language === "de" ? "Fluss" : "Flow"}: {item.flow}
+                        </span>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
         </div>
       )}
 

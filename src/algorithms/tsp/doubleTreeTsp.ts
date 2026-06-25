@@ -3,6 +3,7 @@ import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
 import { depthFirstSearch } from "@/algorithms/search.ts";
 import { runGenerator } from "../utils";
+import type { LocalizedNote } from "@/lib/localization.ts";
 
 /**
  * Represents a snapshot of the Double Tree algorithm at a specific step.
@@ -15,6 +16,7 @@ export interface DoubleTreeState<T extends string | number> {
   tourEdges: WeightedEdge<T>[];
   evaluatingNode: T | null;
   evaluatingEdge: WeightedEdge<T> | null;
+  notes?: LocalizedNote;
 }
 
 /**
@@ -37,17 +39,23 @@ export function* doubleTreeAlgorithmGenerator<T extends string | number>(
   const getState = (
     phase: "mst" | "dfs" | "complete",
     evaluatingNode: T | null = null,
-    evaluatingEdge: WeightedEdge<T> | null = null
+    evaluatingEdge: WeightedEdge<T> | null = null,
+    notes?: LocalizedNote
   ): DoubleTreeState<T> => ({
     phase,
     mstEdges: [...mstEdges],
     tourNodes: [...tourNodes],
     tourEdges: [...tourEdges],
     evaluatingNode,
-    evaluatingEdge
+    evaluatingEdge,
+    notes
   });
 
-  if (recordState) yield getState("mst");
+  if (recordState) {
+    yield getState("mst", null, null, {
+      key: "double_tree.mst"
+    });
+  }
 
   const mstGraph = Graph.fromEdges(mstEdges, false);
   const visited = new Set<T>();
@@ -85,7 +93,10 @@ export function* doubleTreeAlgorithmGenerator<T extends string | number>(
     while (!step.done) {
       const current = step.value.currentNode;
       const newTourEdge = processNode(current);
-      yield getState("dfs", current, newTourEdge);
+      yield getState("dfs", current, newTourEdge, {
+        key: "double_tree.dfs",
+        params: { current }
+      });
       step = dfsGenerator.next();
     }
   } else {
@@ -106,7 +117,11 @@ export function* doubleTreeAlgorithmGenerator<T extends string | number>(
     tourEdges.push(getRequiredEdge(lastNode, firstNode));
   }
 
-  if (recordState) yield getState("complete");
+  if (recordState) {
+    yield getState("complete", null, null, {
+      key: "double_tree.complete"
+    });
+  }
 
   return tourEdges;
 }

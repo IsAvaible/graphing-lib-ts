@@ -2,6 +2,7 @@ import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
 import { doubleTreeAlgorithm } from "@/algorithms/tsp/doubleTreeTsp.ts";
 import { runGenerator } from "../utils";
+import type { LocalizedNote } from "@/lib/localization.ts";
 
 /**
  * Represents a snapshot of the Branch and Bound TSP algorithm.
@@ -16,6 +17,7 @@ export interface BranchAndBoundTspState<T extends string | number> {
   bestTourEdges: WeightedEdge<T>[] | null;
   bestCost: number;
   branchesPruned: number;
+  notes?: LocalizedNote;
 }
 
 /**
@@ -65,7 +67,8 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
     phase: "evaluating" | "complete",
     currentTourNodes: T[],
     currentTourEdges: WeightedEdge<T>[],
-    currentCost: number
+    currentCost: number,
+    notes?: LocalizedNote
   ): BranchAndBoundTspState<T> => ({
     phase,
     currentTourNodes: [...currentTourNodes],
@@ -74,7 +77,8 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
     bestTourNodes: bestTourNodes ? [...bestTourNodes] : null,
     bestTourEdges: bestTourEdges ? [...bestTourEdges] : null,
     bestCost,
-    branchesPruned
+    branchesPruned,
+    notes
   });
 
   function* backtrack(
@@ -89,6 +93,18 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
     // Optimization 3: Branch and Bound Pruning: Stop evaluating if we already exceed the best known cost.
     if (currentCost >= bestCost) {
       branchesPruned++;
+      if (recordState) {
+        yield getState(
+          "evaluating",
+          currentTourNodes,
+          currentTourEdges,
+          currentCost,
+          {
+            key: "branch_and_bound.prune",
+            params: { cost: currentCost, bestCost }
+          }
+        );
+      }
       return;
     }
 
@@ -97,7 +113,16 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
         "evaluating",
         currentTourNodes,
         currentTourEdges,
-        currentCost
+        currentCost,
+        {
+          key: "branch_and_bound.evaluating",
+          params: {
+            node: currentNode,
+            tour: currentTourNodes,
+            cost: currentCost,
+            bestCost: bestCost === Infinity ? "-" : bestCost
+          }
+        }
       );
     }
 
@@ -109,6 +134,17 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
         const lastStep = currentNode;
         if (firstStep > lastStep) {
           branchesPruned++;
+          if (recordState) {
+            yield getState(
+              "evaluating",
+              currentTourNodes,
+              currentTourEdges,
+              currentCost,
+              {
+                key: "branch_and_bound.prune_symmetry"
+              }
+            );
+          }
           return;
         }
       }
@@ -129,7 +165,13 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
               "evaluating",
               bestTourNodes,
               bestTourEdges,
-              totalCost
+              totalCost,
+              {
+                key: "branch_and_bound.new_best",
+                params: {
+                  cost: totalCost
+                }
+              }
             );
           }
         }
@@ -171,7 +213,14 @@ export function* branchAndBoundTspGenerator<T extends string | number>(
       "complete",
       bestTourNodes || [],
       bestTourEdges || [],
-      bestCost === Infinity ? 0 : bestCost
+      bestCost === Infinity ? 0 : bestCost,
+      {
+        key: "branch_and_bound.complete",
+        params: {
+          bestCost: bestCost === Infinity ? 0 : bestCost,
+          branchesPruned
+        }
+      }
     );
   }
 

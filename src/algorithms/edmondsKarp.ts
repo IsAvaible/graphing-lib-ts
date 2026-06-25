@@ -2,6 +2,7 @@ import { Graph } from "../core/Graph.ts";
 import type { FlowEdge, WeightedEdge, ResidualEdge } from "../core/types.ts";
 import { runGenerator, resolveSourceAndSink, EPSILON } from "./utils.ts";
 import { createResidualGraph } from "./residualGraph.ts";
+import type { LocalizedNote } from "../lib/localization.ts";
 
 export interface EdmondsKarpStepState<T> {
   currentNode: T | null;
@@ -10,7 +11,7 @@ export interface EdmondsKarpStepState<T> {
   highlightedEdges: Set<string>; // Format: 'from->to' (main graph edges)
   frontierEdges: Set<string>; // Format: 'from->to' (main graph edges)
   evaluatingEdge: { from: T; to: T } | null; // (main graph edge)
-  notes: string;
+  notes: LocalizedNote;
   graph: Graph<T, true, FlowEdge<T>>; // Current flow network clone
   maxFlow: number;
 
@@ -127,7 +128,10 @@ export function* edmondsKarpGenerator<T extends string | number>(
       highlightedEdges: new Set<string>(),
       frontierEdges: new Set<string>(),
       evaluatingEdge: null,
-      notes: `Starte Edmonds-Karp Algorithmus. Quelle: ${s}, Senke: ${t}.`,
+      notes: {
+        key: "edmonds_karp.start",
+        params: { s, t }
+      },
       graph: clone,
       maxFlow: currentFlowValue,
       residualGraph: null,
@@ -150,7 +154,7 @@ export function* edmondsKarpGenerator<T extends string | number>(
     const getStepState = (
       resCurrentNode: T | null,
       resEvaluatingEdge: ResidualEdge<T> | null,
-      notesStr: string,
+      notesVal: LocalizedNote,
       augmentingPathEdges?: ResidualEdge<T>[]
     ): EdmondsKarpStepState<T> => {
       const resVisited = new Set(visited);
@@ -188,7 +192,7 @@ export function* edmondsKarpGenerator<T extends string | number>(
         highlightedEdges: mainHighlighted,
         frontierEdges: new Set<string>(),
         evaluatingEdge: null,
-        notes: notesStr,
+        notes: notesVal,
         graph: clone,
         maxFlow: currentFlowValue,
         residualGraph: visualizedResidual,
@@ -197,11 +201,10 @@ export function* edmondsKarpGenerator<T extends string | number>(
     };
 
     if (recordState) {
-      yield getStepState(
-        s,
-        null,
-        `BFS-Suche gestartet: Suche nach dem kürzesten augmentierenden Weg von ${s} zu ${t} im Residualnetzwerk.`
-      );
+      yield getStepState(s, null, {
+        key: "edmonds_karp.bfs_start",
+        params: { s, t }
+      });
     }
 
     // Run BFS
@@ -209,11 +212,10 @@ export function* edmondsKarpGenerator<T extends string | number>(
       const u = queue[head++];
 
       if (recordState) {
-        yield getStepState(
-          u,
-          null,
-          `BFS: Entnehme Knoten ${u} aus der Warteschlange und untersuche ausgehende Residualkanten.`
-        );
+        yield getStepState(u, null, {
+          key: "edmonds_karp.bfs_pop",
+          params: { u }
+        });
       }
 
       if (u === t) {
@@ -225,11 +227,10 @@ export function* edmondsKarpGenerator<T extends string | number>(
         // Introduce an epsilon constraint to represent absolute zero
         if (!visited.has(v) && edge.capacity > epsilon) {
           if (recordState) {
-            yield getStepState(
-              u,
-              edge,
-              `BFS: Untersuche Residualkante ${u} -> ${v} (Restkapazität: ${edge.capacity.toFixed(5)}).`
-            );
+            yield getStepState(u, edge, {
+              key: "edmonds_karp.bfs_examine_edge",
+              params: { u, v, capacity: edge.capacity }
+            });
           }
 
           visited.add(v);
@@ -237,11 +238,10 @@ export function* edmondsKarpGenerator<T extends string | number>(
           queue.push(v);
 
           if (recordState) {
-            yield getStepState(
-              u,
-              edge,
-              `BFS: Kante ${u} -> ${v} ist zulässig. Knoten ${v} besucht und zur Warteschlange hinzugefügt.`
-            );
+            yield getStepState(u, edge, {
+              key: "edmonds_karp.bfs_edge_valid",
+              params: { u, v }
+            });
           }
         }
       }
@@ -257,7 +257,10 @@ export function* edmondsKarpGenerator<T extends string | number>(
           highlightedEdges: new Set<string>(),
           frontierEdges: new Set<string>(),
           evaluatingEdge: null,
-          notes: `Kein augmentierender Weg mehr im Residualnetzwerk gefunden. Edmonds-Karp beendet. Maximaler Fluss: ${currentFlowValue.toFixed(5)}.`,
+          notes: {
+            key: "edmonds_karp.no_path",
+            params: { maxFlow: currentFlowValue }
+          },
           graph: clone,
           maxFlow: currentFlowValue,
           residualGraph: null,
@@ -284,7 +287,10 @@ export function* edmondsKarpGenerator<T extends string | number>(
       yield getStepState(
         null,
         null,
-        `Augmentierender Weg gefunden: ${path.map((e) => e.from).join(" -> ")} -> ${t}. Engpasskapazität: \u03B4 = ${delta.toFixed(5)}.`,
+        {
+          key: "edmonds_karp.path_found",
+          params: { path: [...path.map((e) => e.from), t], delta }
+        },
         path
       );
     }
@@ -316,7 +322,10 @@ export function* edmondsKarpGenerator<T extends string | number>(
       yield getStepState(
         null,
         null,
-        `Erhöhe den Fluss um \u03B4 = ${delta.toFixed(5)} entlang des Weges. Aktualisiere Kantenflüsse im Hauptnetzwerk.`,
+        {
+          key: "edmonds_karp.augment_flow",
+          params: { delta }
+        },
         path
       );
     }

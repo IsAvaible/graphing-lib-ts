@@ -1,6 +1,7 @@
 import { Graph } from "@/core/Graph.ts";
 import type { WeightedEdge } from "@/core/types.ts";
 import { runGenerator } from "../utils";
+import type { LocalizedNote } from "@/lib/localization.ts";
 
 /**
  * Represents a snapshot of the Brute-Force TSP algorithm at a specific step.
@@ -15,6 +16,7 @@ export interface BruteForceTspState<T extends string | number> {
   bestTourEdges: WeightedEdge<T>[] | null;
   bestCost: number;
   permutationsEvaluated: number;
+  notes?: LocalizedNote;
 }
 
 /**
@@ -41,7 +43,8 @@ export function* bruteForceTspGenerator<T extends string | number>(
     phase: "evaluating" | "complete",
     currentTourNodes: T[],
     currentTourEdges: WeightedEdge<T>[],
-    currentCost: number
+    currentCost: number,
+    notes?: LocalizedNote
   ): BruteForceTspState<T> => ({
     phase,
     currentTourNodes: [...currentTourNodes],
@@ -50,7 +53,8 @@ export function* bruteForceTspGenerator<T extends string | number>(
     bestTourNodes: bestTourNodes ? [...bestTourNodes] : null,
     bestTourEdges: bestTourEdges ? [...bestTourEdges] : null,
     bestCost,
-    permutationsEvaluated
+    permutationsEvaluated,
+    notes
   });
 
   /**
@@ -81,7 +85,20 @@ export function* bruteForceTspGenerator<T extends string | number>(
         }
 
         if (recordState) {
-          yield getState("evaluating", fullTourNodes, fullTourEdges, totalCost);
+          yield getState(
+            "evaluating",
+            fullTourNodes,
+            fullTourEdges,
+            totalCost,
+            {
+              key: "brute_force.evaluating",
+              params: {
+                tour: fullTourNodes,
+                cost: totalCost,
+                bestCost: bestCost === Infinity ? "-" : bestCost
+              }
+            }
+          );
         }
       }
       return;
@@ -124,7 +141,13 @@ export function* bruteForceTspGenerator<T extends string | number>(
       "complete",
       bestTourNodes || [],
       bestTourEdges || [],
-      bestCost === Infinity ? 0 : bestCost
+      bestCost === Infinity ? 0 : bestCost,
+      {
+        key: "brute_force.complete",
+        params: {
+          bestCost: bestCost === Infinity ? 0 : bestCost
+        }
+      }
     );
   }
 

@@ -1,5 +1,6 @@
 import type { Graph } from "@/core/Graph.ts";
 import type { FlowEdge, WeightedEdge } from "@/core/types.ts";
+import type { LocalizedNote } from "@/lib/localization.ts";
 
 export type Algorithms =
   | "CC"
@@ -23,12 +24,13 @@ export interface BaseVisualState<T> {
   evaluatingEdge: EdgeKey | null;
   subVisualState: VisualState<T> | null; // This will be rendered in a subwindow,
   subGraph?: Graph<T> | null;
+  notes?: LocalizedNote;
 }
 
 export interface FlowDecompositionVisualState<T> extends BaseVisualState<T> {
   algorithm: "FLOW_DECOMP";
   algorithmData: {
-    notes: string;
+    notes?: LocalizedNote;
     graph: Graph<T, true, FlowEdge<T>>;
     decomposedPaths: {
       path: T[];
@@ -43,7 +45,7 @@ export interface FlowDecompositionVisualState<T> extends BaseVisualState<T> {
 export interface EdmondsKarpVisualState<T> extends BaseVisualState<T> {
   algorithm: "EDMONDS_KARP";
   algorithmData: {
-    notes: string;
+    notes?: LocalizedNote;
     maxFlow: number;
     graph: Graph<T, true, FlowEdge<T>>;
     residualGraph: Graph<T, true, WeightedEdge<T>> | null;

@@ -3,6 +3,7 @@ import type { WeightedEdge } from "../core/types";
 import { PriorityQueue } from "@/algorithms/datastructures/PriorityQueue.ts";
 import { UnionFind } from "@/algorithms/datastructures/UnionFind.ts";
 import { runGenerator } from "./utils";
+import type { LocalizedNote } from "../lib/localization.ts";
 
 /**
  * Represents a snapshot of Prim's algorithm at a specific step.
@@ -13,6 +14,7 @@ export interface PrimState<T extends string | number> {
   mstEdges: WeightedEdge<T>[];
   evaluatingEdge: WeightedEdge<T> | null;
   availableEdges: WeightedEdge<T>[];
+  notes?: LocalizedNote;
 }
 
 /**
@@ -29,6 +31,7 @@ export interface KruskalState<T extends string | number> {
     activeNodes: Set<T>;
     activeEdges: { from: T; to: T }[];
   };
+  notes?: LocalizedNote;
 }
 
 /**
@@ -69,16 +72,40 @@ export function* primsAlgorithmGenerator<T extends string | number>(
     visited.add(start);
     addEdgesFrom(start);
 
+    if (recordState) {
+      yield {
+        visitedNodes: new Set(visited),
+        mstEdges: [...mstEdges],
+        evaluatingEdge: null,
+        availableEdges: pq.toArray(),
+        notes: {
+          key: "prim.start",
+          params: { startNode: start }
+        }
+      };
+    }
+
     while (!pq.isEmpty()) {
       const minEdge = pq.pop()!;
 
       // Yield the state first so the observer sees what edge is being evaluated
       if (recordState) {
+        const isVisited = visited.has(minEdge.to);
         yield {
           visitedNodes: new Set(visited),
           mstEdges: [...mstEdges],
           evaluatingEdge: minEdge,
-          availableEdges: pq.toArray()
+          availableEdges: pq.toArray(),
+          notes: {
+            key: isVisited
+              ? "prim.evaluate_visited"
+              : "prim.evaluate_unvisited",
+            params: {
+              from: minEdge.from,
+              to: minEdge.to,
+              weight: minEdge.weight
+            }
+          }
         };
       }
 
@@ -143,13 +170,22 @@ export function* kruskalsAlgorithmGenerator<T extends string | number>(
           evaluatingEdge: edge,
           edgesProcessed,
           totalEdges: allEdges.length,
-          ufState: result.value
+          ufState: result.value,
+          notes: {
+            key: "kruskal.uf_step",
+            params: {
+              from: edge.from,
+              to: edge.to,
+              weight: edge.weight
+            }
+          }
         };
         result = unionGen.next();
       }
 
       // Add edge if accepted
-      if (result.value) {
+      const accepted = result.value;
+      if (accepted) {
         mstEdges.push(edge);
       }
 
@@ -158,22 +194,39 @@ export function* kruskalsAlgorithmGenerator<T extends string | number>(
         mstEdges: [...mstEdges],
         evaluatingEdge: null,
         edgesProcessed,
-        totalEdges: allEdges.length
+        totalEdges: allEdges.length,
+        notes: {
+          key: accepted ? "kruskal.edge_accepted" : "kruskal.edge_rejected",
+          params: {
+            from: edge.from,
+            to: edge.to,
+            weight: edge.weight
+          }
+        }
       };
     } else {
+      // Perform union without substate tracking
+      const accepted = uf.union(edge.from, edge.to);
+      if (accepted) {
+        mstEdges.push(edge);
+      }
+
       if (recordState) {
         // Yield only the high-level Kruskal state
         yield {
           mstEdges: [...mstEdges],
           evaluatingEdge: edge,
           edgesProcessed,
-          totalEdges: allEdges.length
+          totalEdges: allEdges.length,
+          notes: {
+            key: accepted ? "kruskal.edge_accepted" : "kruskal.edge_rejected",
+            params: {
+              from: edge.from,
+              to: edge.to,
+              weight: edge.weight
+            }
+          }
         };
-      }
-
-      // Perform union without substate tracking
-      if (uf.union(edge.from, edge.to)) {
-        mstEdges.push(edge);
       }
     }
   }

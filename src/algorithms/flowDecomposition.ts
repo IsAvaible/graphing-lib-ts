@@ -1,6 +1,7 @@
 import { Graph } from "../core/Graph.ts";
 import type { FlowEdge } from "../core/types.ts";
 import { runGenerator, resolveSourceAndSink } from "./utils.ts";
+import type { LocalizedNote } from "../lib/localization.ts";
 
 export interface DecomposedElement<T> {
   path: T[];
@@ -16,7 +17,7 @@ export interface FlowDecompositionStepState<T> {
   frontierEdges: Set<string>; // Format: 'from->to'
   evaluatingEdge: { from: T; to: T } | null;
   decomposedPaths: DecomposedElement<T>[];
-  notes: string;
+  notes: LocalizedNote;
   graph: Graph<T, true, FlowEdge<T>>;
 }
 
@@ -50,7 +51,7 @@ export function* flowDecompositionGenerator<T extends string | number>(
     currentNode: T | null,
     currentPath: T[],
     evaluatingEdge: { from: T; to: T } | null,
-    notes: string
+    notes: LocalizedNote
   ): FlowDecompositionStepState<T> => {
     const pathEdges = new Set<string>();
     for (let i = 0; i < currentPath.length - 1; i++) {
@@ -80,12 +81,10 @@ export function* flowDecompositionGenerator<T extends string | number>(
   };
 
   if (recordState) {
-    yield getState(
-      null,
-      [],
-      null,
-      `Starte Flussdekomposition. Identifizierte Quelle: ${s ?? "Keine (Nettofluss ist 0)"}, Senke: ${t ?? "Keine"}.`
-    );
+    yield getState(null, [], null, {
+      key: "flow_decomp.start",
+      params: { s: s !== null ? s : "-", t: t !== null ? t : "-" }
+    });
   }
 
   while (true) {
@@ -120,12 +119,9 @@ export function* flowDecompositionGenerator<T extends string | number>(
 
     if (!startEdge) {
       if (recordState) {
-        yield getState(
-          null,
-          [],
-          null,
-          `Keine Kanten mit verbleibendem positivem Fluss gefunden. Dekomposition ist abgeschlossen!`
-        );
+        yield getState(null, [], null, {
+          key: "flow_decomp.complete"
+        });
       }
       break;
     }
@@ -138,7 +134,10 @@ export function* flowDecompositionGenerator<T extends string | number>(
         v0,
         [v0],
         { from: v0, to: w0 },
-        `Wähle Kante (${v0}, ${w0}) mit positivem Flusswert ${startEdge.flow} als Start.`
+        {
+          key: "flow_decomp.select_start_edge",
+          params: { v0, w0, flow: startEdge.flow }
+        }
       );
     }
 
@@ -152,12 +151,10 @@ export function* flowDecompositionGenerator<T extends string | number>(
     let curr = w0;
     while (curr !== t) {
       if (recordState) {
-        yield getState(
-          curr,
-          sequence,
-          null,
-          `Vorwärtssuche bei Knoten ${curr}. Suche ausgehende Kante mit positivem Fluss.`
-        );
+        yield getState(curr, sequence, null, {
+          key: "flow_decomp.forward_search",
+          params: { curr }
+        });
       }
 
       // Find an outgoing edge from curr with positive flow
@@ -179,7 +176,10 @@ export function* flowDecompositionGenerator<T extends string | number>(
           curr,
           sequence,
           { from: curr, to: nextNode },
-          `Untersuche Kante (${curr}, ${nextNode}) mit positivem Fluss ${nextEdge.flow}.`
+          {
+            key: "flow_decomp.examine_edge",
+            params: { curr, nextNode, flow: nextEdge.flow }
+          }
         );
       }
 
@@ -201,12 +201,10 @@ export function* flowDecompositionGenerator<T extends string | number>(
       curr = v0;
       while (curr !== s) {
         if (recordState) {
-          yield getState(
-            curr,
-            sequence,
-            null,
-            `Vorwärtssuche beendet (Senke erreicht). Rückwärtssuche bei Knoten ${curr}. Suche eingehende Kante mit positivem Fluss.`
-          );
+          yield getState(curr, sequence, null, {
+            key: "flow_decomp.backward_search_start",
+            params: { curr }
+          });
         }
 
         // Find an incoming edge to curr with positive flow
@@ -229,7 +227,10 @@ export function* flowDecompositionGenerator<T extends string | number>(
             curr,
             sequence,
             { from: prevNode, to: curr },
-            `Untersuche eingehende Kante (${prevNode}, ${curr}) mit positivem Fluss ${prevEdge.flow}.`
+            {
+              key: "flow_decomp.examine_edge_backward",
+              params: { prevNode, curr, flow: prevEdge.flow }
+            }
           );
         }
 
@@ -276,14 +277,12 @@ export function* flowDecompositionGenerator<T extends string | number>(
       break;
     }
 
-    const typeStr = isCycle ? "Kreis" : "Weg";
+    const typeKey = isCycle ? "notes.type_cycle" : "notes.type_path";
     if (recordState) {
-      const finalState = getState(
-        null,
-        path,
-        null,
-        `Gefundener ${typeStr}: ${path.join(" -> ")}. Engpassfluss (Bottleneck) ist \u03BC = ${mu}.`
-      );
+      const finalState = getState(null, path, null, {
+        key: "flow_decomp.found_component",
+        params: { type: typeKey, path, mu }
+      });
       finalState.highlightedEdges = new Set(
         pathEdges.map((e) => `${e.from}->${e.to}`)
       );
@@ -303,12 +302,10 @@ export function* flowDecompositionGenerator<T extends string | number>(
     decomposedPaths.push({ path, flow: mu, isCycle });
 
     if (recordState) {
-      const subtractedState = getState(
-        null,
-        path,
-        null,
-        `Subtrahiere Fluss \u03BC = ${mu} von allen Kanten auf dem ${typeStr}.`
-      );
+      const subtractedState = getState(null, path, null, {
+        key: "flow_decomp.subtract_flow",
+        params: { type: typeKey, mu }
+      });
       subtractedState.highlightedEdges = new Set(
         pathEdges.map((e) => `${e.from}->${e.to}`)
       );
