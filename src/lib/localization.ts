@@ -1,6 +1,7 @@
 export type GeneralTranslationKey =
   | "notes.title"
   | "notes.title_ek"
+  | "notes.title_cc"
   | "notes.max_flow"
   | "notes.decomposed_components"
   | "notes.type_path"
@@ -28,6 +29,14 @@ export type FlowDecompTranslationKey =
   | "flow_decomp.subtract_flow";
 
 export type CCTranslationKey = "cc.start_component" | "cc.traverse_bfs";
+
+export type CycleCancelingTranslationKey =
+  | "cycle_canceling.search_initial_flow"
+  | "cycle_canceling.initial_flow_found"
+  | "cycle_canceling.bf_relax_edge"
+  | "cycle_canceling.no_negative_cycle"
+  | "cycle_canceling.negative_cycle_found"
+  | "cycle_canceling.cycle_eliminated";
 
 export type PrimTranslationKey =
   | "prim.start"
@@ -79,6 +88,7 @@ export type TranslationKey =
   | EdmondsKarpTranslationKey
   | FlowDecompTranslationKey
   | CCTranslationKey
+  | CycleCancelingTranslationKey
   | PrimTranslationKey
   | KruskalTranslationKey
   | DijkstraTranslationKey
@@ -98,6 +108,7 @@ export type Language = "en" | "de";
 const enTranslations: Record<TranslationKey, string> = {
   "notes.title": "Step Details",
   "notes.title_ek": "Step Details (Edmonds-Karp)",
+  "notes.title_cc": "Step Details (Cycle-Canceling)",
   "notes.max_flow": "Maximum Flow: {maxFlow}",
   "notes.decomposed_components": "Decomposed Components ({count}):",
   "notes.type_path": "Path",
@@ -143,6 +154,19 @@ const enTranslations: Record<TranslationKey, string> = {
     "New unvisited node {node} found. Starting component #{count}.",
   "cc.traverse_bfs":
     "Traversing component #{count}. BFS at node {currentNode}. Queue: {queue}.",
+
+  "cycle_canceling.search_initial_flow":
+    "Searching for a feasible initial b-flow...",
+  "cycle_canceling.initial_flow_found":
+    "Feasible initial b-flow found. Starting cycle-canceling to minimize costs. Initial cost: {totalCost}",
+  "cycle_canceling.bf_relax_edge":
+    "Searching for negative cycles (iteration {iteration}): Relaxing edge {u} -> {v} (cost: {cost}).",
+  "cycle_canceling.no_negative_cycle":
+    "No more negative cycles found in the residual network. Optimal flow reached. Total cost: {totalCost}",
+  "cycle_canceling.negative_cycle_found":
+    "Negative cycle found: {cycle}. Bottleneck capacity \u03B3 = {gamma}.",
+  "cycle_canceling.cycle_eliminated":
+    "Cycle eliminated: adjusted flow by \u03B3 = {gamma} along the cycle. New total cost: {totalCost}.",
 
   "prim.start": "Starting Prim's MST algorithm. Start node: {startNode}.",
   "prim.evaluate_visited":
@@ -205,6 +229,7 @@ const enTranslations: Record<TranslationKey, string> = {
 const deTranslations: Record<TranslationKey, string> = {
   "notes.title": "Schritt-Details",
   "notes.title_ek": "Schritt-Details (Edmonds-Karp)",
+  "notes.title_cc": "Schritt-Details (Cycle-Canceling)",
   "notes.max_flow": "Maximaler Fluss: {maxFlow}",
   "notes.decomposed_components": "Zerlegte Komponenten ({count}):",
   "notes.type_path": "Weg",
@@ -250,6 +275,19 @@ const deTranslations: Record<TranslationKey, string> = {
     "Neuer unbesuchter Knoten {node} gefunden. Starte Komponente #{count}.",
   "cc.traverse_bfs":
     "Traversiere Komponente #{count}. BFS bei Knoten {currentNode}. Warteschlange: {queue}.",
+
+  "cycle_canceling.search_initial_flow":
+    "Suche nach einem zulässigen Anfangs-b-Fluss...",
+  "cycle_canceling.initial_flow_found":
+    "Zulässiger Anfangs-b-Fluss gefunden. Starte Cycle-Canceling zur Kostenminimierung. Anfangskosten: {totalCost}",
+  "cycle_canceling.bf_relax_edge":
+    "Suche nach negativen Kreisen (Iteration {iteration}): Relaxiere Kante {u} -> {v} (Kosten: {cost}).",
+  "cycle_canceling.no_negative_cycle":
+    "Kein negativer Kreis mehr im Residualnetzwerk gefunden. Optimaler Fluss erreicht. Gesamtkosten: {totalCost}",
+  "cycle_canceling.negative_cycle_found":
+    "Negativer Kreis gefunden: {cycle}. Engpasskapazität \u03B3 = {gamma}.",
+  "cycle_canceling.cycle_eliminated":
+    "Kreis eliminiert: Fluss um \u03B3 = {gamma} entlang des Kreises angepasst. Neue Gesamtkosten: {totalCost}.",
 
   "prim.start": "Starte Prim's MST Algorithmus. Startknoten: {startNode}.",
   "prim.evaluate_visited":
