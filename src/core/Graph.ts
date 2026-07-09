@@ -6,6 +6,7 @@ export class Graph<
   E extends Edge<T> = Edge<T>
 > {
   private adjacencyList: Map<T, E[]> = new Map();
+  public balances?: Map<T, number>;
 
   public readonly isDirected: IsDirected;
 
@@ -97,6 +98,10 @@ export class Graph<
         node,
         edges.map((e) => edgeTransformer(e))
       );
+    }
+
+    if (self.balances) {
+      clonedGraph.balances = new Map(self.balances);
     }
 
     return clonedGraph;

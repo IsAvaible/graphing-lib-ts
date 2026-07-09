@@ -3,7 +3,11 @@ import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { readGraphFromFileNode } from "../src/io/node-reader";
-import { parseUnweightedGraph, parseWeightedGraph } from "../src/io/parser";
+import {
+  parseUnweightedGraph,
+  parseWeightedGraph,
+  parseMinCostFlowGraph
+} from "../src/io/parser";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,5 +63,30 @@ describe("Graph File Parser", () => {
     if (edge.kind === "weighted") {
       expect(edge.weight).toBe(0.02075);
     }
+  });
+
+  it("should correctly parse a min-cost flow graph", async () => {
+    const mcfData = [
+      "3", // 3 vertices
+      "10.0", // balance node 0
+      "-2.0", // balance node 1
+      "-8.0", // balance node 2
+      "0 1 5.0 15.0", // edge 0->1, cost 5.0, capacity 15.0
+      "1 2 2.5 10.0" // edge 1->2, cost 2.5, capacity 10.0
+    ];
+
+    const graph = await parseMinCostFlowGraph(mcfData, true);
+
+    expect(graph.getNodes()).toHaveLength(3);
+    expect(graph.balances?.get(0)).toBe(10.0);
+    expect(graph.balances?.get(1)).toBe(-2.0);
+    expect(graph.balances?.get(2)).toBe(-8.0);
+
+    const neighborsOf0 = graph.getNeighbors(0);
+    expect(neighborsOf0).toHaveLength(1);
+    expect(neighborsOf0[0].kind).toBe("flow");
+    expect(neighborsOf0[0].to).toBe(1);
+    expect(neighborsOf0[0].cost).toBe(5.0);
+    expect(neighborsOf0[0].capacity).toBe(15.0);
   });
 });
