@@ -18,6 +18,7 @@ interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   weight?: number; // Added to store weight for display
   flow?: number;
   capacity?: number;
+  cost?: number;
 }
 
 // Helper to reliably get IDs whether D3 has populated the object or not
@@ -226,6 +227,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               } else if (edge.kind === "flow") {
                 existingLink.flow = edge.flow;
                 existingLink.capacity = edge.capacity;
+                existingLink.cost = edge.cost;
               }
               newLinksData.push(existingLink);
             } else {
@@ -235,6 +237,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               } else if (edge.kind === "flow") {
                 link.flow = edge.flow;
                 link.capacity = edge.capacity;
+                link.cost = edge.cost;
               }
               newLinksData.push(link);
               topologyChanged = true;
@@ -351,9 +354,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         (enter) =>
           enter
             .append("text")
-            .text((d) =>
-              d.weight !== undefined ? d.weight : `${d.flow}/${d.capacity}`
-            )
+            .text((d) => {
+              const costStr = d.cost !== undefined ? ` [c: ${d.cost}]` : "";
+              if (d.weight !== undefined) return `${d.weight}${costStr}`;
+              return `${d.flow}/${d.capacity}${costStr}`;
+            })
             .attr("font-size", 11)
             .attr("font-weight", "500")
             .attr("fill", "#64748b")
@@ -365,9 +370,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             .style("opacity", 0)
             .call((e) => e.transition().duration(300).style("opacity", 1)),
         (update) => {
-          update.text((d) =>
-            d.weight !== undefined ? d.weight : `${d.flow}/${d.capacity}`
-          );
+          update.text((d) => {
+            const costStr = d.cost !== undefined ? ` [c: ${d.cost}]` : "";
+            if (d.weight !== undefined) return `${d.weight}${costStr}`;
+            return `${d.flow}/${d.capacity}${costStr}`;
+          });
           return update;
         },
         (exit) =>
@@ -460,11 +467,19 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         if (graph) {
           const edge = graph.getEdge(getId(d.source), getId(d.target));
           if (edge) {
-            if (edge.kind === "weighted") return edge.weight;
-            if (edge.kind === "flow") return `${edge.flow}/${edge.capacity}`;
+            const costStr =
+              (edge as any).cost !== undefined
+                ? ` [c: ${(edge as any).cost}]`
+                : "";
+            if (edge.kind === "weighted") return `${edge.weight}${costStr}`;
+            if (edge.kind === "flow") {
+              return `${edge.flow}/${edge.capacity}${costStr}`;
+            }
           }
         }
-        return d.weight !== undefined ? d.weight : `${d.flow}/${d.capacity}`;
+        const costStr = d.cost !== undefined ? ` [c: ${d.cost}]` : "";
+        if (d.weight !== undefined) return `${d.weight}${costStr}`;
+        return `${d.flow}/${d.capacity}${costStr}`;
       });
   }, [visualState]);
 

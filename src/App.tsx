@@ -11,7 +11,8 @@ import {
   dijkstraVisualizer,
   flowDecompositionVisualizer,
   bellmanFordVisualizer,
-  edmondsKarpVisualizer
+  edmondsKarpVisualizer,
+  cycleCancelingVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
@@ -69,6 +70,8 @@ export const App: React.FC = () => {
         return bellmanFordVisualizer(graph);
       case "EDMONDS_KARP":
         return edmondsKarpVisualizer(graph);
+      case "CYCLE_CANCELING":
+        return cycleCancelingVisualizer(graph);
       default:
         return null;
     }
@@ -154,6 +157,9 @@ export const App: React.FC = () => {
                 </SelectItem>
                 <SelectItem value="EDMONDS_KARP">
                   Edmonds-Karp Max Flow
+                </SelectItem>
+                <SelectItem value="CYCLE_CANCELING">
+                  Cycle-Canceling Min-Cost Flow
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -286,6 +292,26 @@ export const App: React.FC = () => {
         </div>
       )}
 
+      {/* ALGORITHM NOTES BOX FOR CYCLE-CANCELING */}
+      {graph && visualState.algorithm === "CYCLE_CANCELING" && (
+        <div className="absolute bottom-6 left-6 z-10 w-96 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200 flex flex-col space-y-3 pointer-events-auto transition-all duration-300">
+          <div className="border-b border-gray-100 pb-2">
+            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+              {translate("notes.title_cc", language)}
+            </h3>
+          </div>
+          <div className="text-sm text-gray-700 leading-relaxed min-h-[50px]">
+            {translateNote(visualState.algorithmData.notes, language)}
+          </div>
+          <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+              {language === "de" ? "Gesamtkosten" : "Total Cost"}:{" "}
+              {visualState.algorithmData.totalCost.toFixed(5)}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Residual Graph SubWindow for Edmonds-Karp */}
       {graph &&
         visualState.algorithm === "EDMONDS_KARP" &&
@@ -293,6 +319,25 @@ export const App: React.FC = () => {
         visualState.algorithmData.residualVisualState && (
           <SubWindow
             title="Residualnetzwerk (Kantenwert = Restkapazität)"
+            defaultX={20}
+            defaultY={120}
+            defaultWidth={400}
+            defaultHeight={400}
+          >
+            <GraphCanvas
+              graph={visualState.algorithmData.residualGraph}
+              visualState={visualState.algorithmData.residualVisualState}
+            />
+          </SubWindow>
+        )}
+
+      {/* Residual Graph SubWindow for Cycle-Canceling */}
+      {graph &&
+        visualState.algorithm === "CYCLE_CANCELING" &&
+        visualState.algorithmData.residualGraph &&
+        visualState.algorithmData.residualVisualState && (
+          <SubWindow
+            title="Residualnetzwerk (Kantenwert = Restkapazität [Kosten])"
             defaultX={20}
             defaultY={120}
             defaultWidth={400}

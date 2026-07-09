@@ -13,7 +13,8 @@ export type Algorithms =
   | "DIJKSTRA"
   | "FLOW_DECOMP"
   | "BELLMAN_FORD"
-  | "EDMONDS_KARP";
+  | "EDMONDS_KARP"
+  | "CYCLE_CANCELING";
 
 export interface BaseVisualState<T> {
   visitedNodes: Set<T>;
@@ -53,15 +54,30 @@ export interface EdmondsKarpVisualState<T> extends BaseVisualState<T> {
   };
 }
 
+export interface CycleCancelingVisualState<T> extends BaseVisualState<T> {
+  algorithm: "CYCLE_CANCELING";
+  algorithmData: {
+    notes: LocalizedNote;
+    totalCost: number;
+    graph: Graph<T, true, FlowEdge<T>>;
+    residualGraph: Graph<T, true, WeightedEdge<T>> | null;
+    residualVisualState: VisualState<T> | null;
+  };
+}
+
 export interface DefaultVisualState<T> extends BaseVisualState<T> {
-  algorithm?: Exclude<Algorithms, "FLOW_DECOMP" | "EDMONDS_KARP">;
+  algorithm?: Exclude<
+    Algorithms,
+    "FLOW_DECOMP" | "EDMONDS_KARP" | "CYCLE_CANCELING"
+  >;
   algorithmData?: undefined;
 }
 
 export type VisualState<T> =
   | DefaultVisualState<T>
   | FlowDecompositionVisualState<T>
-  | EdmondsKarpVisualState<T>;
+  | EdmondsKarpVisualState<T>
+  | CycleCancelingVisualState<T>;
 
 export const INITIAL_VISUAL_STATE: DefaultVisualState<any> = {
   visitedNodes: new Set(),
