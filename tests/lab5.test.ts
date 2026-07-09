@@ -15,7 +15,7 @@ describe("Edmonds-Karp Max Flow Algorithm", () => {
     graph.addEdge({ kind: "flow", from: 2, to: 3, flow: 0, capacity: 3 });
     graph.addEdge({ kind: "flow", from: 1, to: 2, flow: 0, capacity: 1 }); // edge between paths
 
-    const maxFlow = edmondsKarp(graph, 0, 3);
+    const { maxFlow } = edmondsKarp(graph, 0, 3);
     expect(maxFlow).toBe(5);
   });
 
@@ -25,7 +25,7 @@ describe("Edmonds-Karp Max Flow Algorithm", () => {
       true
     );
 
-    const maxFlow = edmondsKarp(graph, 0, 7);
+    const { maxFlow } = edmondsKarp(graph, 0, 7);
     expect(maxFlow).toBe(4);
   });
 
@@ -35,7 +35,7 @@ describe("Edmonds-Karp Max Flow Algorithm", () => {
       true
     );
 
-    const maxFlow = edmondsKarp(graph, 0, 7);
+    const { maxFlow } = edmondsKarp(graph, 0, 7);
     expect(maxFlow).toBe(5);
   });
 
@@ -47,7 +47,7 @@ describe("Edmonds-Karp Max Flow Algorithm", () => {
 
     const flowGraph = convertToFlowGraph(weightedGraph);
 
-    const maxFlow = edmondsKarp(flowGraph, 0, 7);
+    const { maxFlow } = edmondsKarp(flowGraph, 0, 7);
     expect(maxFlow).toBeCloseTo(0.75447, 5);
   });
 });

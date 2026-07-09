@@ -1,5 +1,5 @@
 import { Graph } from "../core/Graph.ts";
-import type { FlowEdge } from "../core/types.ts";
+import type { FlowEdge, ResidualEdge, WeightedEdge } from "../core/types.ts";
 
 export const EPSILON = 1e-6;
 
@@ -85,4 +85,40 @@ export function resolveSourceAndSink<T extends string | number>(
   }
 
   return { s, t };
+}
+
+export function convertToWeightedMCFResidualGraph<T extends string | number>(
+  resGraph: Graph<T, true, ResidualEdge<T>>,
+  epsilon: number = EPSILON
+): Graph<T, true, WeightedEdge<T>> {
+  const wGraph = new Graph<T, true, WeightedEdge<T>>(true);
+  for (const node of resGraph.getNodes()) {
+    wGraph.addNode(node);
+  }
+  for (const node of resGraph.getNodes()) {
+    for (const edge of resGraph.getNeighbors(node)) {
+      if (edge.capacity > epsilon) {
+        wGraph.addEdge({
+          kind: "weighted",
+          from: edge.from,
+          to: edge.to,
+          weight: Number(edge.capacity.toFixed(5)),
+          cost: edge.cost
+        } as unknown as WeightedEdge<T>);
+      }
+    }
+  }
+  return wGraph;
+}
+
+export function calculateTotalCost<T>(
+  graph: Graph<T, true, FlowEdge<T>>
+): number {
+  let cost = 0;
+  for (const node of graph.getNodes()) {
+    for (const edge of graph.getNeighbors(node)) {
+      cost += edge.flow * (edge.cost ?? 0);
+    }
+  }
+  return cost;
 }

@@ -12,7 +12,8 @@ import {
   flowDecompositionVisualizer,
   bellmanFordVisualizer,
   edmondsKarpVisualizer,
-  cycleCancelingVisualizer
+  cycleCancelingVisualizer,
+  successiveShortestPathVisualizer
 } from "@/ui/adapters.ts";
 import { useAlgorithmRunner } from "@/ui/hooks/useAlgorithmRunner.ts";
 import { TopBar } from "@/components/TopBar.tsx";
@@ -72,6 +73,8 @@ export const App: React.FC = () => {
         return edmondsKarpVisualizer(graph);
       case "CYCLE_CANCELING":
         return cycleCancelingVisualizer(graph);
+      case "SUCCESSIVE_SHORTEST_PATH":
+        return successiveShortestPathVisualizer(graph);
       default:
         return null;
     }
@@ -160,6 +163,9 @@ export const App: React.FC = () => {
                 </SelectItem>
                 <SelectItem value="CYCLE_CANCELING">
                   Cycle-Canceling Min-Cost Flow
+                </SelectItem>
+                <SelectItem value="SUCCESSIVE_SHORTEST_PATH">
+                  Successive Shortest Path Min-Cost Flow
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -292,25 +298,32 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* ALGORITHM NOTES BOX FOR CYCLE-CANCELING */}
-      {graph && visualState.algorithm === "CYCLE_CANCELING" && (
-        <div className="absolute bottom-6 left-6 z-10 w-96 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200 flex flex-col space-y-3 pointer-events-auto transition-all duration-300">
-          <div className="border-b border-gray-100 pb-2">
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
-              {translate("notes.title_cc", language)}
-            </h3>
+      {/* ALGORITHM NOTES BOX FOR CYCLE-CANCELING / SUCCESSIVE SHORTEST PATH */}
+      {graph &&
+        (visualState.algorithm === "CYCLE_CANCELING" ||
+          visualState.algorithm === "SUCCESSIVE_SHORTEST_PATH") && (
+          <div className="absolute bottom-6 left-6 z-10 w-96 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200 flex flex-col space-y-3 pointer-events-auto transition-all duration-300">
+            <div className="border-b border-gray-100 pb-2">
+              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+                {translate(
+                  visualState.algorithm === "CYCLE_CANCELING"
+                    ? "notes.title_cc"
+                    : "notes.title_ssp",
+                  language
+                )}
+              </h3>
+            </div>
+            <div className="text-sm text-gray-700 leading-relaxed min-h-[50px]">
+              {translateNote(visualState.algorithmData.notes, language)}
+            </div>
+            <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                {language === "de" ? "Gesamtkosten" : "Total Cost"}:{" "}
+                {visualState.algorithmData.totalCost.toFixed(5)}
+              </span>
+            </div>
           </div>
-          <div className="text-sm text-gray-700 leading-relaxed min-h-[50px]">
-            {translateNote(visualState.algorithmData.notes, language)}
-          </div>
-          <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-              {language === "de" ? "Gesamtkosten" : "Total Cost"}:{" "}
-              {visualState.algorithmData.totalCost.toFixed(5)}
-            </span>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* Residual Graph SubWindow for Edmonds-Karp */}
       {graph &&
@@ -331,9 +344,10 @@ export const App: React.FC = () => {
           </SubWindow>
         )}
 
-      {/* Residual Graph SubWindow for Cycle-Canceling */}
+      {/* Residual Graph SubWindow for Cycle-Canceling / Successive Shortest Path */}
       {graph &&
-        visualState.algorithm === "CYCLE_CANCELING" &&
+        (visualState.algorithm === "CYCLE_CANCELING" ||
+          visualState.algorithm === "SUCCESSIVE_SHORTEST_PATH") &&
         visualState.algorithmData.residualGraph &&
         visualState.algorithmData.residualVisualState && (
           <SubWindow

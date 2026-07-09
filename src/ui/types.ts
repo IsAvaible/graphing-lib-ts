@@ -14,7 +14,8 @@ export type Algorithms =
   | "FLOW_DECOMP"
   | "BELLMAN_FORD"
   | "EDMONDS_KARP"
-  | "CYCLE_CANCELING";
+  | "CYCLE_CANCELING"
+  | "SUCCESSIVE_SHORTEST_PATH";
 
 export interface BaseVisualState<T> {
   visitedNodes: Set<T>;
@@ -65,10 +66,20 @@ export interface CycleCancelingVisualState<T> extends BaseVisualState<T> {
   };
 }
 
+export interface SuccessiveShortestPathVisualState<T> extends Omit<
+  CycleCancelingVisualState<T>,
+  "algorithm"
+> {
+  algorithm: "SUCCESSIVE_SHORTEST_PATH";
+}
+
 export interface DefaultVisualState<T> extends BaseVisualState<T> {
   algorithm?: Exclude<
     Algorithms,
-    "FLOW_DECOMP" | "EDMONDS_KARP" | "CYCLE_CANCELING"
+    | "FLOW_DECOMP"
+    | "EDMONDS_KARP"
+    | "CYCLE_CANCELING"
+    | "SUCCESSIVE_SHORTEST_PATH"
   >;
   algorithmData?: undefined;
 }
@@ -77,7 +88,8 @@ export type VisualState<T> =
   | DefaultVisualState<T>
   | FlowDecompositionVisualState<T>
   | EdmondsKarpVisualState<T>
-  | CycleCancelingVisualState<T>;
+  | CycleCancelingVisualState<T>
+  | SuccessiveShortestPathVisualState<T>;
 
 export const INITIAL_VISUAL_STATE: DefaultVisualState<any> = {
   visitedNodes: new Set(),

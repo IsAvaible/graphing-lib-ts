@@ -86,7 +86,11 @@ export function* edmondsKarpGenerator<T extends string | number>(
   endNode?: T,
   recordState: boolean = true,
   epsilon: number = EPSILON
-): Generator<EdmondsKarpStepState<T>, number, unknown> {
+): Generator<
+  EdmondsKarpStepState<T>,
+  { maxFlow: number; flowGraph: Graph<T, true, FlowEdge<T>> },
+  unknown
+> {
   // Clone the graph
   const clone = graph.clone();
 
@@ -331,7 +335,7 @@ export function* edmondsKarpGenerator<T extends string | number>(
     }
   }
 
-  return currentFlowValue;
+  return { maxFlow: currentFlowValue, flowGraph: clone };
 }
 
 /**
@@ -341,7 +345,7 @@ export function edmondsKarp<T extends string | number>(
   graph: Graph<T, true, FlowEdge<T>>,
   startNode?: T,
   endNode?: T
-): number {
+): { maxFlow: number; flowGraph: Graph<T, true, FlowEdge<T>> } {
   if (!graph.isDirected) {
     throw new Error(
       "Edmonds-Karp algorithm strictly requires a directed graph."

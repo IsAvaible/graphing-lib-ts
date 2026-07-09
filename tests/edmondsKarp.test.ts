@@ -33,7 +33,7 @@ describe("Graph Algorithms - Edmonds-Karp Max Flow", () => {
   describe("Direct Execution", () => {
     it("should compute the correct max flow on a complex directed graph", () => {
       const graph = buildTestGraph();
-      const maxFlow = edmondsKarp(graph, 1, 4);
+      const { maxFlow } = edmondsKarp(graph, 1, 4);
 
       expect(maxFlow).toBe(15);
     });
@@ -43,7 +43,7 @@ describe("Graph Algorithms - Edmonds-Karp Max Flow", () => {
       graph.addEdge(fEdge(1, 2, 5));
       graph.addEdge(fEdge(2, 3, 5));
 
-      const maxFlow = edmondsKarp(graph, 1, 3);
+      const { maxFlow } = edmondsKarp(graph, 1, 3);
       expect(maxFlow).toBe(5);
     });
 
@@ -52,7 +52,7 @@ describe("Graph Algorithms - Edmonds-Karp Max Flow", () => {
       graph.addEdge(fEdge(1, 2, 10));
       graph.addNode(3); // Isolated sink node
 
-      const maxFlow = edmondsKarp(graph, 1, 3);
+      const { maxFlow } = edmondsKarp(graph, 1, 3);
       expect(maxFlow).toBe(0);
     });
 
@@ -138,7 +138,7 @@ describe("Graph Algorithms - Edmonds-Karp Max Flow", () => {
       // --- Generator Finished ---
       const result = generator.next();
       expect(result.done).toBe(true);
-      expect(result.value).toBe(5);
+      expect((result.value as any).maxFlow).toBe(5);
     });
   });
 });

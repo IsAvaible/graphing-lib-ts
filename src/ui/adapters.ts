@@ -22,6 +22,7 @@ import {
   convertToFlowGraph
 } from "@/algorithms/edmondsKarp.ts";
 import { cycleCancelingGenerator } from "@/algorithms/cycleCanceling.ts";
+import { successiveShortestPathGenerator } from "@/algorithms/successiveShortestPath.ts";
 import type { UnweightedEdge, FlowEdge, WeightedEdge } from "@/core/types.ts";
 
 export function* connectedComponentsVisualizer<T>(
@@ -604,6 +605,100 @@ export function* cycleCancelingVisualizer<T extends string | number>(
       subVisualState: null,
       subGraph: null,
       algorithm: "CYCLE_CANCELING",
+      algorithmData: {
+        notes: state.notes,
+        totalCost: state.totalCost,
+        graph: state.graph,
+        residualGraph: state.residualGraph,
+        residualVisualState
+      }
+    };
+  }
+}
+
+export function* successiveShortestPathVisualizer<T extends string | number>(
+  graph: Graph<T>
+): Generator<VisualState<T>, void, unknown> {
+  let flowGraph: Graph<T, true, FlowEdge<T>>;
+
+  let hasFlowEdges = false;
+  for (const node of graph.getNodes()) {
+    for (const edge of graph.getNeighbors(node)) {
+      if (edge.kind === "flow") {
+        hasFlowEdges = true;
+        break;
+      }
+    }
+    if (hasFlowEdges) break;
+  }
+
+  if (hasFlowEdges) {
+    flowGraph = graph as typeof flowGraph;
+  } else {
+    flowGraph = convertToFlowGraph(graph as Graph<T, boolean, WeightedEdge<T>>);
+  }
+
+  // Preserve balances map if present in the uploaded graph
+  if (graph.balances) {
+    flowGraph.balances = graph.balances;
+  }
+
+  const algorithm = successiveShortestPathGenerator(flowGraph);
+
+  for (const state of algorithm) {
+    // Map main graph highlighted edges
+    const highlightedEdges = new Set<EdgeKey>();
+    for (const key of state.highlightedEdges) {
+      const [from, to] = key.split("->");
+      highlightedEdges.add(getEdgeKey(from, to));
+    }
+
+    const frontierEdges = new Set<EdgeKey>();
+    for (const key of state.frontierEdges) {
+      const [from, to] = key.split("->");
+      frontierEdges.add(getEdgeKey(from, to));
+    }
+
+    const evaluatingEdge = state.evaluatingEdge
+      ? getEdgeKey(state.evaluatingEdge.from, state.evaluatingEdge.to)
+      : null;
+
+    // Map residual graph's visual state
+    let residualVisualState: VisualState<T> | null = null;
+    if (state.residualVisualState) {
+      const resHighlighted = new Set<EdgeKey>();
+      for (const key of state.residualVisualState.highlightedEdges) {
+        const [from, to] = key.split("->");
+        resHighlighted.add(getEdgeKey(from, to));
+      }
+
+      const resEvaluating = state.residualVisualState.evaluatingEdge
+        ? getEdgeKey(
+            state.residualVisualState.evaluatingEdge.from,
+            state.residualVisualState.evaluatingEdge.to
+          )
+        : null;
+
+      residualVisualState = {
+        ...INITIAL_VISUAL_STATE,
+        currentNode: state.residualVisualState.currentNode,
+        visitedNodes: new Set(state.residualVisualState.visitedNodes),
+        queuedNodes: new Set(state.residualVisualState.queuedNodes),
+        highlightedEdges: resHighlighted,
+        evaluatingEdge: resEvaluating
+      };
+    }
+
+    yield {
+      visitedNodes: new Set(state.visitedNodes),
+      queuedNodes: new Set(state.queuedNodes),
+      currentNode: state.currentNode,
+      highlightedEdges,
+      frontierEdges,
+      evaluatingEdge,
+      subVisualState: null,
+      subGraph: null,
+      algorithm: "SUCCESSIVE_SHORTEST_PATH",
       algorithmData: {
         notes: state.notes,
         totalCost: state.totalCost,

@@ -2,6 +2,7 @@ export type GeneralTranslationKey =
   | "notes.title"
   | "notes.title_ek"
   | "notes.title_cc"
+  | "notes.title_ssp"
   | "notes.max_flow"
   | "notes.decomposed_components"
   | "notes.type_path"
@@ -37,6 +38,12 @@ export type CycleCancelingTranslationKey =
   | "cycle_canceling.no_negative_cycle"
   | "cycle_canceling.negative_cycle_found"
   | "cycle_canceling.cycle_eliminated";
+
+export type SuccessiveShortestPathTranslationKey =
+  | "successive_shortest_path.init_potentials"
+  | "successive_shortest_path.find_shortest_path"
+  | "successive_shortest_path.augment_flow"
+  | "successive_shortest_path.complete";
 
 export type PrimTranslationKey =
   | "prim.start"
@@ -89,6 +96,7 @@ export type TranslationKey =
   | FlowDecompTranslationKey
   | CCTranslationKey
   | CycleCancelingTranslationKey
+  | SuccessiveShortestPathTranslationKey
   | PrimTranslationKey
   | KruskalTranslationKey
   | DijkstraTranslationKey
@@ -109,6 +117,7 @@ const enTranslations: Record<TranslationKey, string> = {
   "notes.title": "Step Details",
   "notes.title_ek": "Step Details (Edmonds-Karp)",
   "notes.title_cc": "Step Details (Cycle-Canceling)",
+  "notes.title_ssp": "Step Details (Successive Shortest Path)",
   "notes.max_flow": "Maximum Flow: {maxFlow}",
   "notes.decomposed_components": "Decomposed Components ({count}):",
   "notes.type_path": "Path",
@@ -167,6 +176,15 @@ const enTranslations: Record<TranslationKey, string> = {
     "Negative cycle found: {cycle}. Bottleneck capacity \u03B3 = {gamma}.",
   "cycle_canceling.cycle_eliminated":
     "Cycle eliminated: adjusted flow by \u03B3 = {gamma} along the cycle. New total cost: {totalCost}.",
+
+  "successive_shortest_path.init_potentials":
+    "Initializing node potentials by running Bellman-Ford on residual graph to guarantee non-negative reduced costs.",
+  "successive_shortest_path.find_shortest_path":
+    "Searching for shortest augmenting path from supply node {s} to demand node {t} in residual network.",
+  "successive_shortest_path.augment_flow":
+    "Augmented flow by \u03B3 = {gamma} along path: {path}. Adjusted imbalances and node potentials. New total cost: {totalCost}.",
+  "successive_shortest_path.complete":
+    "Successive Shortest Path finished. All imbalances satisfied. Final total cost: {totalCost}.",
 
   "prim.start": "Starting Prim's MST algorithm. Start node: {startNode}.",
   "prim.evaluate_visited":
@@ -230,6 +248,7 @@ const deTranslations: Record<TranslationKey, string> = {
   "notes.title": "Schritt-Details",
   "notes.title_ek": "Schritt-Details (Edmonds-Karp)",
   "notes.title_cc": "Schritt-Details (Cycle-Canceling)",
+  "notes.title_ssp": "Schritt-Details (Successive Shortest Path)",
   "notes.max_flow": "Maximaler Fluss: {maxFlow}",
   "notes.decomposed_components": "Zerlegte Komponenten ({count}):",
   "notes.type_path": "Weg",
@@ -288,6 +307,15 @@ const deTranslations: Record<TranslationKey, string> = {
     "Negativer Kreis gefunden: {cycle}. Engpasskapazität \u03B3 = {gamma}.",
   "cycle_canceling.cycle_eliminated":
     "Kreis eliminiert: Fluss um \u03B3 = {gamma} entlang des Kreises angepasst. Neue Gesamtkosten: {totalCost}.",
+
+  "successive_shortest_path.init_potentials":
+    "Initialisiere Knotenpotenziale mittels Bellman-Ford auf dem Residualnetzwerk, um nicht-negative reduzierte Kosten zu garantieren.",
+  "successive_shortest_path.find_shortest_path":
+    "Suche nach kürzestem augmentierendem Weg von Angebotsknoten {s} zu Nachfrageknoten {t} im Residualnetzwerk.",
+  "successive_shortest_path.augment_flow":
+    "Fluss um \u03B3 = {gamma} entlang des Weges {path} erhöht. Imbalancen und Knotenpotenziale angepasst. Neue Gesamtkosten: {totalCost}.",
+  "successive_shortest_path.complete":
+    "Successive Shortest Path beendet. Alle Imbalancen ausgeglichen. Gesamtkosten: {totalCost}.",
 
   "prim.start": "Starte Prim's MST Algorithmus. Startknoten: {startNode}.",
   "prim.evaluate_visited":
