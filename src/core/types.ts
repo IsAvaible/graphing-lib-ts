@@ -2,6 +2,8 @@
 type BaseEdge<T> = {
   from: T;
   to: T;
+  /** Optional reference to an underlying or source edge (e.g., when building reduced-cost or auxiliary graphs). */
+  ref?: Edge<T>;
 };
 
 export type UnweightedEdge<T> = {

@@ -32,8 +32,8 @@ describe("Graph Algorithms - Dijkstra Shortest Path", () => {
       expect(distances.get(3)).toBe(3); // 1 -> 2 -> 3 is weight 3
 
       expect(predecessors.get(1)).toBeNull();
-      expect(predecessors.get(2)).toBe(1);
-      expect(predecessors.get(3)).toBe(2);
+      expect(predecessors.get(2)?.from).toBe(1);
+      expect(predecessors.get(3)?.from).toBe(2);
     });
 
     it("should compute the correct shortest paths on a directed graph", () => {
@@ -45,8 +45,8 @@ describe("Graph Algorithms - Dijkstra Shortest Path", () => {
       expect(distances.get(3)).toBe(3); // 1 -> 2 -> 3 is weight 3
 
       expect(predecessors.get(1)).toBeNull();
-      expect(predecessors.get(2)).toBe(1);
-      expect(predecessors.get(3)).toBe(2);
+      expect(predecessors.get(2)?.from).toBe(1);
+      expect(predecessors.get(3)?.from).toBe(2);
     });
 
     it("should handle disconnected graphs properly", () => {
@@ -61,7 +61,7 @@ describe("Graph Algorithms - Dijkstra Shortest Path", () => {
       expect(distances.get(3)).toBe(Infinity);
 
       expect(predecessors.get(1)).toBeNull();
-      expect(predecessors.get(2)).toBe(1);
+      expect(predecessors.get(2)?.from).toBe(1);
       expect(predecessors.get(3)).toBeNull();
     });
   });
@@ -70,6 +70,8 @@ describe("Graph Algorithms - Dijkstra Shortest Path", () => {
     it("should yield correct step-by-step states during Dijkstra's Algorithm", () => {
       const graph = buildTestGraph(true);
       const generator = dijkstraGenerator(graph, 1);
+
+      getNextState(generator); // Skip initial start state
 
       // --- Pop Node 1 ---
       let state = getNextState(generator);
@@ -87,7 +89,7 @@ describe("Graph Algorithms - Dijkstra Shortest Path", () => {
       // --- Relax edge 1 -> 2 (Update node 2 distance to 1) ---
       state = getNextState(generator);
       expect(state.distances.get(2)).toBe(1);
-      expect(state.predecessors.get(2)).toBe(1);
+      expect(state.predecessors.get(2)?.from).toBe(1);
 
       // --- Evaluate edge 1 -> 3 ---
       state = getNextState(generator);
@@ -98,7 +100,7 @@ describe("Graph Algorithms - Dijkstra Shortest Path", () => {
       // --- Relax edge 1 -> 3 (Update node 3 distance to 4) ---
       state = getNextState(generator);
       expect(state.distances.get(3)).toBe(4);
-      expect(state.predecessors.get(3)).toBe(1);
+      expect(state.predecessors.get(3)?.from).toBe(1);
 
       // --- Pop Node 2 (dist = 1) ---
       state = getNextState(generator);
@@ -115,7 +117,7 @@ describe("Graph Algorithms - Dijkstra Shortest Path", () => {
       // --- Relax edge 2 -> 3 (Update node 3 distance to 3) ---
       state = getNextState(generator);
       expect(state.distances.get(3)).toBe(3);
-      expect(state.predecessors.get(3)).toBe(2);
+      expect(state.predecessors.get(3)?.from).toBe(2);
 
       // --- Pop Node 3 (dist = 3) ---
       state = getNextState(generator);

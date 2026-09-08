@@ -12,7 +12,7 @@ export interface DijkstraState<T extends string | number> {
   currentNode: T | null;
   visitedNodes: Set<T>; // Settled nodes (shortest path finalized)
   distances: Map<T, number>; // Distance from start node to other nodes
-  predecessors: Map<T, T | null>; // Shortest path tree structure
+  predecessors: Map<T, WeightedEdge<T> | null>; // Shortest path tree structure
   queue: { node: T; distance: number }[]; // Nodes currently in the priority queue
   evaluatingEdge: WeightedEdge<T> | null; // Edge currently being relaxed
   notes?: LocalizedNote;
@@ -23,7 +23,7 @@ export interface DijkstraState<T extends string | number> {
  */
 export interface DijkstraResult<T> {
   distances: Map<T, number>;
-  predecessors: Map<T, T | null>;
+  predecessors: Map<T, WeightedEdge<T> | null>;
 }
 
 /**
@@ -50,7 +50,7 @@ export function* dijkstraGenerator<T extends string | number>(
   }
 
   const distances = new Map<T, number>();
-  const predecessors = new Map<T, T | null>();
+  const predecessors = new Map<T, WeightedEdge<T> | null>();
   const visitedNodes = new Set<T>();
 
   // Distance based priority queue
@@ -120,7 +120,7 @@ export function* dijkstraGenerator<T extends string | number>(
 
       if (alt < distV) {
         distances.set(edge.to, alt);
-        predecessors.set(edge.to, u);
+        predecessors.set(edge.to, edge);
         pq.push({ node: edge.to, distance: alt });
 
         // Yield to show the relaxation and updated predecessor

@@ -228,7 +228,8 @@ export function* edmondsKarpGenerator<T extends string | number>(
 
       for (const edge of residualGraph.getNeighbors(u)) {
         const v = edge.to;
-        // Introduce an epsilon constraint to represent absolute zero
+
+        // Not visited and has capacity left
         if (!visited.has(v) && edge.capacity > epsilon) {
           if (recordState) {
             yield getStepState(u, edge, {

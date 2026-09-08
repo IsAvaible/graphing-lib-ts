@@ -116,7 +116,8 @@ export interface RelaxationStep<T> {
 
 export function* findNegativeCycle<T extends string | number>(
   residualGraph: Graph<T, true, ResidualEdge<T>>,
-  epsilon: number = EPSILON
+  epsilon: number = EPSILON,
+  recordState: boolean = true
 ): Generator<RelaxationStep<T>, ResidualEdge<T>[] | null, unknown> {
   const V = residualGraph.getNodes().length;
   const dist = new Map<T, number>();
@@ -143,7 +144,9 @@ export function* findNegativeCycle<T extends string | number>(
             parent.set(v, edge);
             anyRelaxation = true;
 
-            yield { u, edge, iteration: i, parent: new Map(parent) };
+            if (recordState) {
+              yield { u, edge, iteration: i, parent: new Map(parent) };
+            }
           }
         }
       }
@@ -163,6 +166,7 @@ export function* findNegativeCycle<T extends string | number>(
         const distV = dist.get(v) ?? Infinity;
 
         if (alt < distV - epsilon) {
+          parent.set(v, edge);
           cycleNode = v;
           break;
         }
@@ -288,59 +292,11 @@ export function buildReducedCostGraph<T extends string | number>(
           kind: "weighted",
           from: edge.from,
           to: edge.to,
-          weight: Number(reducedCost.toFixed(5))
+          weight: Number(reducedCost.toFixed(5)),
+          ref: edge
         } as unknown as WeightedEdge<T>);
       }
     }
   }
   return wGraph;
-}
-
-export function reconstructPath<T extends string | number>(
-  s: T,
-  t: T,
-  predecessors: Map<T, T | null>,
-  distances: Map<T, number>,
-  residualGraph: Graph<T, true, ResidualEdge<T>>,
-  potentials: Map<T, number>,
-  epsilon: number = EPSILON
-): ResidualEdge<T>[] {
-  const path: ResidualEdge<T>[] = [];
-  const visitedInPath = new Set<T>([t]);
-  let curr = t;
-  while (curr !== s) {
-    const pred = predecessors.get(curr);
-    if (pred === undefined || pred === null || visitedInPath.has(pred)) {
-      throw new Error("kein b-Fluss möglich");
-    }
-    visitedInPath.add(pred);
-
-    // Find the edge pred -> curr that was relaxed
-    const distCurr = distances.get(curr)!;
-    const distPred = distances.get(pred)!;
-    let bestEdge: ResidualEdge<T> | null = null;
-    let minDiff = Infinity;
-
-    for (const edge of residualGraph.getNeighbors(pred)) {
-      if (edge.to === curr && edge.capacity > epsilon) {
-        const reducedCost = Math.max(
-          0,
-          edge.cost - (potentials.get(pred) ?? 0) + (potentials.get(curr) ?? 0)
-        );
-        const diff = Math.abs(distCurr - (distPred + reducedCost));
-        if (diff < minDiff) {
-          minDiff = diff;
-          bestEdge = edge;
-        }
-      }
-    }
-
-    if (!bestEdge || minDiff > epsilon) {
-      throw new Error("kein b-Fluss möglich");
-    }
-    path.push(bestEdge);
-    curr = pred;
-  }
-  path.reverse();
-  return path;
 }

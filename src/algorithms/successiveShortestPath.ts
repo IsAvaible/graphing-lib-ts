@@ -12,8 +12,7 @@ import {
   augmentFlow,
   calculateInitialPotentials,
   calculateImbalances,
-  buildReducedCostGraph,
-  reconstructPath
+  buildReducedCostGraph
 } from "./mcfShared.ts";
 
 export type SuccessiveShortestPathStepState<T extends string | number> =
@@ -68,7 +67,7 @@ export function* successiveShortestPathGenerator<T extends string | number>(
 
   // Phase 1: Eliminate negative cycles from f = 0
   while (true) {
-    const bfGen = findNegativeCycle(residualGraph, epsilon);
+    const bfGen = findNegativeCycle(residualGraph, epsilon, false);
 
     let bfResult = bfGen.next();
     while (!bfResult.done) {
@@ -161,12 +160,12 @@ export function* successiveShortestPathGenerator<T extends string | number>(
 
         // Reconstruct highlighted edges from predecessors
         const pathEdges: ResidualEdge<T>[] = [];
-        for (const [v, u] of step.predecessors.entries()) {
-          if (u !== null) {
-            const edge = residualGraph
-              .getNeighbors(u)
-              .find((e) => e.to === v && e.capacity > epsilon);
-            if (edge) pathEdges.push(edge);
+        for (const [, predEdge] of step.predecessors.entries()) {
+          if (
+            predEdge?.ref &&
+            (predEdge.ref as ResidualEdge<T>).capacity > epsilon
+          ) {
+            pathEdges.push(predEdge.ref as ResidualEdge<T>);
           }
         }
 
@@ -214,15 +213,19 @@ export function* successiveShortestPathGenerator<T extends string | number>(
     }
 
     // Reconstruct the shortest path from s to t
-    const path = reconstructPath(
-      s,
-      t,
-      predecessors,
-      distances,
-      residualGraph,
-      potentials,
-      epsilon
-    );
+    const path: ResidualEdge<T>[] = [];
+    const visited = new Set<T>([t]);
+    let curr = t;
+    while (curr !== s) {
+      const predEdge = predecessors.get(curr);
+      if (!predEdge || !predEdge.ref || visited.has(predEdge.from)) {
+        throw new Error("kein b-Fluss möglich");
+      }
+      path.push(predEdge.ref as ResidualEdge<T>);
+      curr = predEdge.from;
+      visited.add(curr);
+    }
+    path.reverse();
 
     // Update potentials:
     // M = max dist of any reachable node

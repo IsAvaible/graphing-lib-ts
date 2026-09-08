@@ -13,7 +13,7 @@ function getMCFPath(filename: string): string {
   return path.join(__dirname, "../graphs/mcf", filename);
 }
 
-describe("Lab 4 - Cycle-Canceling and Successive Shortest Path MCF", () => {
+describe("Lab 6 - Cycle-Canceling and Successive Shortest Path MCF", () => {
   describe("Direct Execution on MCF Test Graphs", () => {
     it("should compute the correct min cost for Kostenminimal1.txt (3)", async () => {
       const graphPath = getMCFPath("Kostenminimal1.txt");

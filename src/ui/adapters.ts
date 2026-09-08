@@ -296,7 +296,7 @@ export function* dijkstraVisualizer<T extends string | number>(
     const highlightedEdges = new Set<EdgeKey>();
     for (const [node, pred] of state.predecessors.entries()) {
       if (pred !== null) {
-        highlightedEdges.add(getEdgeKey(node, pred));
+        highlightedEdges.add(getEdgeKey(node, pred.from));
       }
     }
 

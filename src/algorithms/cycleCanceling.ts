@@ -179,7 +179,11 @@ export function* cycleCancelingGenerator<T extends string | number>(
   // Phase 2: Cancel negative cost cycles
   while (true) {
     // Run Bellman-Ford generator to find negative cycles
-    const bfGen = findNegativeCycle(residualGraph, epsilon);
+    const bfGen = findNegativeCycle(
+      residualGraph,
+      epsilon,
+      recordState && isSmallGraph
+    );
     let bfResult = bfGen.next();
     while (!bfResult.done) {
       const step = bfResult.value;
